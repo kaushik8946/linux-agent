@@ -86,7 +86,12 @@ class DockerClient:
         err = result.stderr.lower()
         if "permission denied" in err:
             return DockerStatus.PERMISSION_DENIED, _first(result.stderr)
-        if "cannot connect" in err or "is the docker daemon running" in err:
+        if (
+            "cannot connect" in err
+            or "failed to connect" in err
+            or "is the docker daemon running" in err
+            or "no such file or directory" in err
+        ):
             return DockerStatus.DAEMON_UNREACHABLE, _first(result.stderr)
         if result.timed_out:
             return DockerStatus.ERROR, "docker timed out"

@@ -200,3 +200,20 @@ def test_unreadable_output_is_reported() -> None:
 
     client._run = garbled
     assert reg.call(INSPECT_CONTAINER, {"container": "web"})["status"] == "error"
+
+
+def test_newer_docker_connection_message_is_daemon_unreachable() -> None:
+    fake = FakeDocker()
+    client = DockerClient(lambda _n: DOCKER, run=fake)
+
+    def refused(
+        argv: Sequence[str], t: float, e: Mapping[str, str] | None
+    ) -> ProcResult:
+        return ProcResult(
+            tuple(argv), 1, "",
+            "failed to connect to the docker API at unix:///x.sock; check if the"
+            " path is correct: dial unix /x.sock: connect: no such file or directory",
+        )  # fmt: skip
+
+    client._run = refused
+    assert client.info().status is DockerStatus.DAEMON_UNREACHABLE
