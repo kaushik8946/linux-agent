@@ -30,7 +30,7 @@ variables take precedence over `.env`.
 | `OPENAI_BASE_URL` | yes | | OpenAI-compatible gateway URL, `http(s)://...` |
 | `OPENAI_MODEL` | yes | | A tool-calling-capable model your gateway allows |
 | `AGENT_REQUEST_TIMEOUT` | no | `60` | Seconds per gateway request (1-600) |
-| `AGENT_MAX_TOOL_ROUNDS` | no | `6` | Model requests per question (1-50) |
+| `AGENT_MAX_TOOL_ROUNDS` | no | `12` | Model requests per question (1-50) |
 | `AGENT_REPORT_DIR` | no | `reports` | Where `/report` writes (created on first use) |
 | `AGENT_LOG_DIR` | no | `logs` | Where the private task journal is kept |
 | `AGENT_WORKSPACE_ROOT` | no | `~/projects` | The only directory new projects are created in |

@@ -22,7 +22,7 @@ def test_valid_config_loads_with_defaults(tmp_path: Path) -> None:
     cfg = load_config(good_env(), base_dir=tmp_path)
     assert cfg.model == "test-model"
     assert cfg.request_timeout == 60
-    assert cfg.max_tool_rounds == 6
+    assert cfg.max_tool_rounds == 12
     assert cfg.report_dir == tmp_path / "reports"
 
 

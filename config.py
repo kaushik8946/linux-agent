@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 PLACEHOLDER_API_KEY = "replace_me"
 
 DEFAULT_REQUEST_TIMEOUT = 60.0
-DEFAULT_MAX_TOOL_ROUNDS = 6
+DEFAULT_MAX_TOOL_ROUNDS = 12
 DEFAULT_REPORT_DIR = "reports"
 DEFAULT_LOG_DIR = "logs"
 DEFAULT_WORKSPACE_ROOT = "~/projects"
