@@ -12,8 +12,10 @@ from rich.console import Console
 
 from agent.approval import ApprovalService
 from agent.command_plan import parse_plan
+from agent.executor import ChangeExecutor
 from agent.llm_client import LLMClient, LLMError, check_gateway
 from agent.orchestrator import Orchestrator
+from agent.task_store import JOURNAL_NAME, TaskJournal
 from agent.version import get_version
 from cli.session import Session
 from config import Config, ConfigError, load_config
@@ -120,12 +122,15 @@ def check_gateway_command(config: Config) -> int:
 def build_session(config: Config) -> Session:
     profile = discover()
     runner = CommandRunner.for_host(profile, extra_secrets=[config.api_key])
+    approvals = ApprovalService(input)
+    journal = TaskJournal(config.log_dir / JOURNAL_NAME, secrets=[config.api_key])
     orchestrator = Orchestrator(
         LLMClient.from_config(config),
         build_registry(profile, runner),
         runner,
         secrets=[config.api_key],
-        approvals=ApprovalService(input),
+        approvals=approvals,
+        executor=ChangeExecutor(runner, approvals, journal),
     )
     return Session(
         orchestrator=orchestrator,

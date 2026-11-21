@@ -79,7 +79,7 @@ class Prompt:
         (RiskClass.USER_LEVEL_CHANGE, Requirement.CONFIRM),
         (RiskClass.SYSTEM_CHANGE, Requirement.CONFIRM),
         (RiskClass.DESTRUCTIVE, Requirement.TYPED),
-        (RiskClass.PRIVILEGED, Requirement.TYPED),
+        (RiskClass.PRIVILEGED, Requirement.BLOCKED),
         (RiskClass.UNKNOWN, Requirement.BLOCKED),
         (RiskClass.UNSUPPORTED, Requirement.BLOCKED),
         (RiskClass.SENSITIVE, Requirement.BLOCKED),

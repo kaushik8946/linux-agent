@@ -68,8 +68,7 @@ class ApprovalService:
             if requirement is Requirement.TYPED:
                 phrase = plan.confirmation_phrase()
                 answer = self._ask(
-                    f"{rendered}\n\nThis plan can destroy data or needs elevated "
-                    f"privileges.\nType exactly '{phrase}' to proceed (anything "
+                    f"{rendered}\n\nThis plan can destroy data.\nType exactly '{phrase}' to proceed (anything "
                     "else cancels): "
                 )
                 ok = answer.strip() == phrase

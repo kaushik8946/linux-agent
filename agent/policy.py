@@ -54,9 +54,15 @@ _RULES: dict[RiskClass, tuple[Requirement, str]] = {
         Requirement.TYPED,
         "can destroy data; requires typing a confirmation phrase",
     ),
+    # Privilege escalation is never run through a generic command plan.
+    # Privileged operations need a dedicated, reviewed adapter (Build 10+)
+    # that controls exactly what runs with elevated rights.
     RiskClass.PRIVILEGED: (
-        Requirement.TYPED,
-        "needs elevated privileges; requires typing a confirmation phrase",
+        Requirement.BLOCKED,
+        (
+            "privilege escalation is not run from a command plan; it needs a "
+            "dedicated reviewed workflow"
+        ),
     ),
     RiskClass.UNKNOWN: (
         Requirement.BLOCKED,

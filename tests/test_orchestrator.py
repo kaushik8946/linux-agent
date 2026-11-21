@@ -183,7 +183,7 @@ def test_stepwise_plan_reports_pending_steps_to_the_model(tmp_path: Path) -> Non
         (plan_args(("a", "bash", ["-c", "id"])), "UNSUPPORTED", "blocked"),
         (plan_args(("a", "cat", ["/etc/shadow"])), "SENSITIVE", "blocked"),
         (plan_args(("a", "rm", ["-rf", "x"])), "DESTRUCTIVE", "approval_unavailable"),
-        (plan_args(("a", "sudo", ["ls"])), "PRIVILEGED", "approval_unavailable"),
+        (plan_args(("a", "sudo", ["ls"])), "PRIVILEGED", "blocked"),
         (
             plan_args(("a", "echo", ["ok"]), ("b", "touch", ["x"])),
             "USER_LEVEL_CHANGE",

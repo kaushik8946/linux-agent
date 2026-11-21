@@ -17,6 +17,7 @@ PLACEHOLDER_API_KEY = "replace_me"
 DEFAULT_REQUEST_TIMEOUT = 60.0
 DEFAULT_MAX_TOOL_ROUNDS = 6
 DEFAULT_REPORT_DIR = "reports"
+DEFAULT_LOG_DIR = "logs"
 
 MAX_REQUEST_TIMEOUT = 600.0
 MAX_TOOL_ROUNDS_LIMIT = 50
@@ -41,6 +42,12 @@ class Config:
     request_timeout: float
     max_tool_rounds: int
     report_dir: Path
+    log_dir: Path
+
+    def ensure_log_dir(self) -> Path:
+        """Create the log directory (private). Call only when logging."""
+        self.log_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        return self.log_dir
 
     def ensure_report_dir(self) -> Path:
         """Create the report directory. Call only when a report is written."""
@@ -56,11 +63,32 @@ class Config:
             "request_timeout": self.request_timeout,
             "max_tool_rounds": self.max_tool_rounds,
             "report_dir": str(self.report_dir),
+            "log_dir": str(self.log_dir),
         }
 
 
 def _get(env: Mapping[str, str], name: str) -> str:
     return env.get(name, "").strip()
+
+
+def _resolve_dir(
+    env: Mapping[str, str],
+    name: str,
+    default: str,
+    base_dir: Path,
+    problems: list[str],
+) -> Path:
+    """Resolve a directory setting without creating it."""
+    path = Path(_get(env, name) or default)
+    if "\x00" in str(path):
+        problems.append(f"{name} contains an invalid character")
+        return path
+    path = path.expanduser()
+    if not path.is_absolute():
+        path = base_dir / path
+    if path.exists() and not path.is_dir():
+        problems.append(f"{name} exists but is not a directory")
+    return path
 
 
 def load_config(
@@ -126,15 +154,10 @@ def load_config(
                     f"AGENT_MAX_TOOL_ROUNDS must be between 1 and {MAX_TOOL_ROUNDS_LIMIT}"
                 )
 
-    report_dir = Path(_get(env, "AGENT_REPORT_DIR") or DEFAULT_REPORT_DIR)
-    if "\x00" in str(report_dir):
-        problems.append("AGENT_REPORT_DIR contains an invalid character")
-    else:
-        report_dir = report_dir.expanduser()
-        if not report_dir.is_absolute():
-            report_dir = base_dir / report_dir
-        if report_dir.exists() and not report_dir.is_dir():
-            problems.append("AGENT_REPORT_DIR exists but is not a directory")
+    report_dir = _resolve_dir(
+        env, "AGENT_REPORT_DIR", DEFAULT_REPORT_DIR, base_dir, problems
+    )
+    log_dir = _resolve_dir(env, "AGENT_LOG_DIR", DEFAULT_LOG_DIR, base_dir, problems)
 
     if problems:
         raise ConfigError(problems)
@@ -146,4 +169,5 @@ def load_config(
         request_timeout=timeout,
         max_tool_rounds=rounds,
         report_dir=report_dir,
+        log_dir=log_dir,
     )

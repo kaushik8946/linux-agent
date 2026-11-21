@@ -402,7 +402,11 @@ class CommandRunner:
     # ------------------------------------------------------------------
 
     def run_plan(
-        self, plan: CommandPlan, cancel: threading.Event | None = None
+        self,
+        plan: CommandPlan,
+        cancel: threading.Event | None = None,
+        extra_risks: frozenset[RiskClass] = frozenset(),
+        on_step: Callable[[StepResult], None] | None = None,
     ) -> PlanResult:
         """Validate every step, then run them as the plan's mode requests.
 
@@ -412,7 +416,15 @@ class CommandRunner:
         the rest are returned as ``pending``.
         """
         cancel = cancel or threading.Event()
-        prepared = [self._safe_prepare(s) for s in plan.steps]
+        # extra_risks lets an approved plan run steps of risk classes the
+        # runner would not run by itself. The executor passes only classes
+        # the user approved; the runner never widens this on its own.
+        saved = self._allowed_risks
+        self._allowed_risks = saved | extra_risks
+        try:
+            prepared = [self._safe_prepare(s) for s in plan.steps]
+        finally:
+            self._allowed_risks = saved
         if any(isinstance(p, StepResult) for p in prepared):
             rejected = [
                 p
@@ -431,6 +443,8 @@ class CommandRunner:
         if plan.mode == "stepwise":
             first, rest = ready[0], ready[1:]
             result = self._execute(first, None, cancel)
+            if on_step is not None:
+                on_step(result)
             return PlanResult(True, [result], pending=[p.step.id for p in rest])
 
         results: list[StepResult] = []
@@ -447,11 +461,24 @@ class CommandRunner:
                     )
                 )
                 continue
+            if cancel.is_set():
+                results.append(
+                    StepResult(
+                        p.step.id,
+                        Status.CANCELLED,
+                        p.preview,
+                        reason="not run: cancelled before this step",
+                    )
+                )
+                halted = True
+                continue
             stdin = (
                 outputs.get(p.step.stdin_from_step) if p.step.stdin_from_step else None
             )
             result = self._execute(p, stdin, cancel)
             results.append(result)
+            if on_step is not None:
+                on_step(result)
             outputs[p.step.id] = result.stdout
             halted = result.status is not Status.OK
         return PlanResult(True, results)
