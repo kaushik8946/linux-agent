@@ -84,8 +84,9 @@ GET_AGENT_STATUS_TOOL: dict[str, Any] = {
     },
 }
 
-# Provisional schema. Build 4 validates plans against the real model and may
-# tighten it. In Build 2 a proposed plan is parsed but never executed.
+# Mirrors agent.command_plan.CommandPlan, which is the authoritative validator.
+# The default dispatcher below never executes plans; agent.plan_dispatch
+# connects them to the controlled executor.
 EXECUTE_COMMAND_PLAN_TOOL: dict[str, Any] = {
     "type": "function",
     "function": {
@@ -134,6 +135,7 @@ EXECUTE_COMMAND_PLAN_TOOL: dict[str, Any] = {
                             "max_output_bytes": {
                                 "type": "integer",
                                 "minimum": 1,
+                                "maximum": 262144,
                             },
                             "env_allowlist": {
                                 "type": "array",
