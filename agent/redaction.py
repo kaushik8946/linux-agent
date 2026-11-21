@@ -12,6 +12,12 @@ from collections.abc import Iterable
 
 REDACTED = "[REDACTED]"
 MIN_LITERAL_SECRET_LENGTH = 6
+# A literal secret this long, or one that is not a plain run of letters, is
+# replaced wherever it occurs. Shorter plain-word values (for example "ubuntu"
+# or "linux") are matched only as whole words, so ordinary output such as
+# "16ubuntu1" is not mangled by an unrelated environment value.
+_PLAIN_WORD_MAX = 12
+_PLAIN_WORD = re.compile(r"[A-Za-z]+")
 
 _KEY_WORDS = (
     r"(?:password|passwd|passphrase|secret|token|api[_-]?key|apikey|"
@@ -47,7 +53,14 @@ def redact(text: str, secrets: Iterable[str] = ()) -> str:
     if not text:
         return text
     for literal in secrets:
-        if literal and len(literal) >= MIN_LITERAL_SECRET_LENGTH:
+        if not literal or len(literal) < MIN_LITERAL_SECRET_LENGTH:
+            continue
+        if _PLAIN_WORD.fullmatch(literal) and len(literal) <= _PLAIN_WORD_MAX:
+            pattern = re.compile(
+                r"(?<![A-Za-z0-9])" + re.escape(literal) + r"(?![A-Za-z0-9])"
+            )
+            text = pattern.sub(REDACTED, text)
+        else:
             text = text.replace(literal, REDACTED)
     text = _PRIVATE_KEY_BLOCK.sub(REDACTED, text)
     text = _PRIVATE_KEY_PARTIAL.sub(REDACTED, text)

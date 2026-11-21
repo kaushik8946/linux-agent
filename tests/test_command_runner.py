@@ -678,3 +678,11 @@ def test_preview_steps_structured(tmp_path: Path) -> None:
     )
     assert items[0].risk == "READ_ONLY" and items[0].command == "echo 'a b'"
     assert items[1].blocked_reason and items[1].risk == "DESTRUCTIVE"
+
+
+def test_short_env_value_does_not_mangle_version_strings(tmp_path: Path) -> None:
+    r = runner(tmp_path, environ={"PATH": "/usr/bin:/bin", "MY_PASSWORD": "ubuntu"})
+    res = one(r, executable="echo", args=["g++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0"])
+    assert "16ubuntu1" in res.stdout and "[REDACTED]" not in res.stdout
+    hidden = one(r, executable="echo", args=["the password is ubuntu"])
+    assert "ubuntu" not in hidden.stdout
