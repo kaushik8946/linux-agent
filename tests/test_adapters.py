@@ -616,7 +616,12 @@ def test_service_start_failure_reaches_the_model(tmp_path: Path) -> None:
         script=[completion(None, [tool_call(START_SERVICE, {"service": "flaky"})]), completion("ok")],
     )  # fmt: skip
     orch.ask("start flaky")
-    assert last_payload(sdk)["status"] == "failed"
+    data = last_payload(sdk)
+    # The start command reported ok, but the unit is not active afterwards:
+    # verification fails and the outcome is never "completed".
+    assert data["status"] in ("failed", "partial")
+    assert data["verification"]["outcome"] in ("FAILED", "PARTIALLY PASSED")
+    assert "Verification" not in data["message"]
 
 
 def test_operation_render_shows_everything() -> None:

@@ -15,10 +15,12 @@ from typing import Any
 from agent.command_policy import RiskClass
 from agent.operations import Operation, OperationSpec
 from agent.registry import ToolRegistry, ToolSpec
+from agent.verifier import Check, CheckResult
 from hostplatform.packages.base import (
     InstallResult,
     PackageAdapter,
     PackageState,
+    PackageStatus,
     validate_package_name,
 )
 from hostplatform.services.base import (
@@ -81,6 +83,16 @@ def start_result_dict(result: StartResult) -> dict[str, Any]:
     }
 
 
+def describe_package(state: PackageState) -> str:
+    version = f" ({state.installed_version})" if state.installed_version else ""
+    return f"{state.name}: {state.status.value}{version}"
+
+
+def describe_service(state: ServiceState) -> str:
+    sub = f" ({state.sub_state})" if state.sub_state else ""
+    return f"{state.unit}: {state.status.value}{sub}"
+
+
 def register_package_tools(
     registry: ToolRegistry, adapter: PackageAdapter | None
 ) -> None:
@@ -111,11 +123,32 @@ def register_package_tools(
         )
     )
 
+    def install_checks(name: str, want: str | None) -> list[Check]:
+        def installed() -> CheckResult:
+            st = adapter.query(name)
+            ok = st.status is PackageStatus.INSTALLED
+            return CheckResult(
+                f"{name} is installed", ok, f"status is {st.status.value}"
+            )
+
+        def version() -> CheckResult:
+            st = adapter.query(name)
+            if st.status is not PackageStatus.INSTALLED:
+                return CheckResult("installed version", False, "not installed")
+            if want and st.installed_version != want:
+                return CheckResult(
+                    "installed version",
+                    False,
+                    f"expected {want}, found {st.installed_version}",
+                )
+            return CheckResult("installed version", True, str(st.installed_version))
+
+        return [Check("installed", installed), Check("version", version)]
+
     def prepare_install(args: dict[str, Any]) -> Operation:
         name = validate_package_name(args["package"])
         plan = adapter.plan_install(name)
         state = adapter.query(name)
-        version = f" ({state.installed_version})" if state.installed_version else ""
 
         def op(
             summary: str,
@@ -130,7 +163,7 @@ def register_package_tools(
                 summary=summary,
                 commands=commands,
                 risk=RiskClass.SYSTEM_CHANGE,
-                baseline=f"{name}: {state.status.value}{version}",
+                baseline=describe_package(state),
                 expected_end_state=expected,
                 affected=[f"package {p}" for p in (plan.new_packages or (name,))],
                 verification=[
@@ -142,6 +175,11 @@ def register_package_tools(
                     f"{name}. This agent does not remove packages."
                 ),
                 perform=perform,
+                checks=install_checks(name, plan.candidate_version),
+                probe_state=lambda: describe_package(adapter.query(name)),
+                diagnose=lambda: [
+                    f"{name}: {adapter.query(name).detail or 'no detail'}"
+                ],
                 **flags,
             )
 
@@ -223,11 +261,36 @@ def register_service_tools(
         )
     )
 
+    def start_checks(unit: str) -> list[Check]:
+        def active() -> CheckResult:
+            st = adapter.status(unit)
+            return CheckResult(
+                f"{unit} is active", st.status.value == "active", st.status.value
+            )
+
+        def healthy() -> CheckResult:
+            st = adapter.status(unit)
+            bad = st.sub_state in ("failed", "dead", "auto-restart", "start-pre")
+            return CheckResult(
+                f"{unit} stays up",
+                st.status.value == "active" and not bad,
+                f"sub-state {st.sub_state}",
+            )
+
+        return [Check("active", active), Check("healthy", healthy)]
+
+    def service_diagnostics(unit: str) -> list[str]:
+        st = adapter.status(unit)
+        return [
+            describe_service(st),
+            f"enabled: {st.enabled}, main pid: {st.main_pid}",
+            st.detail or "no detail",
+        ]
+
     def prepare_start(args: dict[str, Any]) -> Operation:
         unit = validate_service_name(args["service"])
         state = adapter.status(unit)
         argv = adapter.start_argv(unit)
-        sub = f" ({state.sub_state})" if state.sub_state else ""
 
         def op(
             summary: str, commands: list[str], perform: Any, **flags: Any
@@ -238,7 +301,7 @@ def register_service_tools(
                 summary=summary,
                 commands=commands,
                 risk=RiskClass.SYSTEM_CHANGE,
-                baseline=f"{unit}: {state.status.value}{sub}",
+                baseline=describe_service(state),
                 expected_end_state=f"{unit} active",
                 affected=[f"service {unit}"],
                 verification=[
@@ -247,6 +310,9 @@ def register_service_tools(
                 ],
                 recovery=f"If unwanted, stop it yourself with: sudo systemctl stop {unit}.",
                 perform=perform,
+                checks=start_checks(unit),
+                probe_state=lambda: describe_service(adapter.status(unit)),
+                diagnose=lambda: service_diagnostics(unit),
                 **flags,
             )
 

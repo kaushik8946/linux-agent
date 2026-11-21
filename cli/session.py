@@ -210,6 +210,9 @@ class Session:
                 )
                 for line in self._safe(str(data.get("preview", ""))).splitlines():
                     self.console.print(f"  {escape(line)}", highlight=False)
+            elif event == "verification":
+                for line in self._safe(str(data.get("summary", ""))).splitlines():
+                    self.console.print(f"  {escape(line)}", highlight=False)
             elif event == "approval_result":
                 status_text = str(data.get("status"))
                 label = {

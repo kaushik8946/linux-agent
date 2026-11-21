@@ -31,6 +31,7 @@ from agent.operations import Operation
 from agent.planner import ActionPlan, build_action_plan
 from agent.policy import Requirement
 from agent.task_store import JournalError, TaskJournal, excerpt, new_task_id
+from agent.verifier import VerificationReport, verify
 from hostplatform.command_runner import CommandRunner, PlanResult, Status, StepResult
 
 # Risk classes an approval may unlock. Anything else stays blocked.
@@ -52,6 +53,7 @@ class ExecutionOutcome:
     plan_result: PlanResult | None = None
     problems: list[str] = field(default_factory=list)
     operation_result: dict[str, Any] | None = None
+    verification: VerificationReport | None = None
 
     @property
     def executed_anything(self) -> bool:
@@ -348,14 +350,37 @@ class ChangeExecutor:
                 status="ok" if ok else "failed",
                 result=result,
             )
-            outcome = "completed" if ok else "failed"
-            finish(outcome)
-            message = (
-                "The operation finished. Verify its result before claiming success."
-                if ok
-                else "The operation did not achieve its expected state."
+            # Verify the real end state; the adapter's own "ok" is not enough.
+            report = verify(operation)
+            stderr = result.get("stderr_excerpt")
+            if not report.passed and isinstance(stderr, str) and stderr.strip():
+                report.diagnostics.insert(0, f"command stderr: {excerpt(stderr)}")
+            self.journal.record(
+                task_id,
+                "verification",
+                fingerprint=operation.fingerprint,
+                **report.to_dict(),
             )
-            return ExecutionOutcome(task_id, outcome, message, operation_result=result)
+            outcome = "completed" if ok and report.passed else "failed"
+            if outcome == "failed" and report.partial_change:
+                outcome = "partial"
+            finish(outcome, verification=report.outcome.value)
+            if outcome == "completed":
+                message = "The operation finished and its end state was verified."
+            elif ok:
+                message = (
+                    "The command reported success, but verification did not "
+                    "pass. Stopped; no further change was made."
+                )
+            else:
+                message = "The operation did not achieve its expected state."
+            return ExecutionOutcome(
+                task_id,
+                outcome,
+                message,
+                operation_result=result,
+                verification=report,
+            )
         finally:
             with self._lock:
                 self._running.discard(operation.fingerprint)

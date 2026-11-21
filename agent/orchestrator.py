@@ -310,6 +310,9 @@ class Orchestrator:
         }
         if outcome.operation_result is not None:
             payload["result"] = outcome.operation_result
+        if outcome.verification is not None:
+            payload["verification"] = outcome.verification.to_dict()
+            self._listen("verification", {"summary": outcome.verification.summary()})
         if outcome.problems:
             payload["problems"] = outcome.problems
         return payload

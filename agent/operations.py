@@ -21,6 +21,7 @@ from typing import Any
 
 from agent.command_policy import RiskClass
 from agent.policy import Requirement, decide
+from agent.verifier import Check
 
 
 @dataclass
@@ -41,6 +42,12 @@ class Operation:
     # Could not be prepared (unavailable, invalid); nothing will run.
     refused: str | None = None
     needs_privilege: bool = False
+    # Declared before running (Build 11): independent post-change checks, a
+    # probe returning the current state in the same words as ``baseline``,
+    # and a source of safe diagnostics for a failed verification.
+    checks: list[Check] = field(default_factory=list, repr=False)
+    probe_state: Callable[[], str] | None = field(default=None, repr=False)
+    diagnose: Callable[[], list[str]] | None = field(default=None, repr=False)
 
     @property
     def requirement(self) -> Requirement:
