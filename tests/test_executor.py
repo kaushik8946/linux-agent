@@ -135,8 +135,8 @@ def test_destructive_plan_runs_only_with_typed_phrase(tmp_path: Path) -> None:
 
 def test_blocked_steps_never_run_even_with_approval(tmp_path: Path) -> None:
     env = Env(tmp_path, "y")
-    plan, action = env.plan(raw(mk(tmp_path / "x"), ("b", "bash", ["-c", "id"])))
-    forged = Approval(action.fingerprint, env.now[0], action.requirement)
+    plan, action = env.plan(raw(mk(tmp_path / "x"), ("b", "cat", ["/etc/shadow"])))
+    forged = Approval(action.fingerprint, env.now[0], Requirement.OVERRIDE)
     outcome = env.executor.execute(plan, action, forged)
     assert outcome.status == "rejected" and not (tmp_path / "x").exists()
 
@@ -444,14 +444,23 @@ def test_no_shell_is_used_for_changes(
     assert all(kw["shell"] is False and isinstance(a, list) for a, kw in seen)
 
 
-def test_privileges_are_not_elevated(tmp_path: Path) -> None:
+def test_privileges_are_not_elevated_by_a_normal_yes(tmp_path: Path) -> None:
+    # "y" is not the override phrase, so sudo is never run.
     env = Env(tmp_path, "y")
     plan, action = env.plan(raw(("a", "sudo", ["true"])))
-    forged = Approval(action.fingerprint, env.now[0], action.requirement)
+    assert action.requirement is Requirement.OVERRIDE
+    approval = env.approvals.request(action, "preview")
+    assert approval is None
+    outcome = env.executor.execute(plan, action, approval)
+    assert outcome.status == "rejected" and not outcome.executed_anything
+
+
+def test_forged_confirm_approval_cannot_run_sudo(tmp_path: Path) -> None:
+    env = Env(tmp_path)
+    plan, action = env.plan(raw(("a", "sudo", ["true"])))
+    forged = Approval(action.fingerprint, env.now[0], Requirement.CONFIRM)
     outcome = env.executor.execute(plan, action, forged)
-    assert outcome.status == "rejected"
-    assert not outcome.executed_anything
-    assert action.requirement is Requirement.BLOCKED
+    assert outcome.status == "rejected" and not outcome.executed_anything
 
 
 def test_even_a_forged_typed_approval_cannot_run_sudo(tmp_path: Path) -> None:

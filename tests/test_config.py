@@ -252,12 +252,25 @@ def test_preview_plan_reports_blocked_steps(
 ) -> None:
     plan = {
         "steps": [
-            {"id": "a", "purpose": "x", "executable": "bash", "args": ["-c", "id"]}
+            {"id": "a", "purpose": "x", "executable": "cat", "args": ["/etc/shadow"]}
         ]
     }
     code, out, _ = _preview(monkeypatch, tmp_path, plan, capsys)
     assert code == app.EXIT_PLAN_INVALID
     assert "BLOCKED" in out and "would not run" in out
+
+
+def test_preview_plan_reports_override_steps(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    plan = {
+        "steps": [
+            {"id": "a", "purpose": "x", "executable": "bash", "args": ["-c", "id"]}
+        ]
+    }
+    code, out, _ = _preview(monkeypatch, tmp_path, plan, capsys)
+    assert code == app.EXIT_OK
+    assert "unless you override it" in out
 
 
 @pytest.mark.parametrize("bad", ["{not json", '{"steps": 5}', '{"steps": []}'])

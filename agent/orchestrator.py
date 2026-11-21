@@ -28,6 +28,7 @@ from agent.llm_client import (
     ToolCall,
 )
 from agent.planner import ActionPlan, build_action_plan
+from agent.policy import Requirement, model_view
 from agent.prompts import SYSTEM_PROMPT, host_context_message
 from agent.redaction import redact
 from agent.registry import ToolRegistry
@@ -398,28 +399,37 @@ class Orchestrator:
             {"preview": rendered, "requirement": action.requirement.value},
         )
 
+        override = action.requirement is Requirement.OVERRIDE
+
         def refuse(status: str, message: str) -> dict[str, Any]:
             events.append(ToolEvent(call.name, False, status, arguments=call.arguments))
             self._listen("approval_result", {"status": status})
-            return {
-                "executed": False,
-                "status": status,
-                "requirement": action.requirement.value,
-                "message": message,
-                "steps": [
+            steps = []
+            for s in action.steps:
+                req, reason = model_view(s.decision)
+                steps.append(
                     {
                         "step_id": s.step_id,
                         "command": s.command,
                         "risk": s.decision.risk.value,
-                        "requirement": s.decision.requirement.value,
-                        "reason": s.blocked_reason or s.decision.reason,
+                        "requirement": req,
+                        "reason": s.blocked_reason or reason,
                     }
-                    for s in action.steps
-                ],
+                )
+            plan_req = (
+                Requirement.BLOCKED.value if override else action.requirement.value
+            )
+            return {
+                "executed": False,
+                "status": status,
+                "requirement": plan_req,
+                "message": message,
+                "steps": steps,
             }
 
+        never = "This plan contains steps that are never run."
         if action.blocked:
-            return refuse("blocked", "This plan contains steps that are never run.")
+            return refuse("blocked", never)
         if action.errors:
             return refuse("invalid", " ".join(action.errors))
         if self.approvals is None:
@@ -428,6 +438,10 @@ class Orchestrator:
                 "Changes need local approval, and no approval channel is available.",
             )
         approval = self.approvals.request(action, rendered)
+        if approval is None and override:
+            # Declining an override looks to the model exactly like the old
+            # fixed refusal; it is never told an override was possible.
+            return refuse("blocked", never)
         if approval is None:
             return refuse(
                 "rejected",

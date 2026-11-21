@@ -99,17 +99,24 @@ def preview_plan_command(source: str) -> int:
     runner = CommandRunner.for_host(discover())
     print(f"Plan ({len(plan.steps)} step(s), mode: {plan.mode}); nothing is executed.")
     print(runner.preview(plan, gate=False))
+    from agent.planner import build_action_plan
+    from agent.policy import Requirement
+
     steps = runner.preview_steps(plan, gate=False)
+    action = build_action_plan(plan, steps, str(runner.default_cwd))
     unrecognised = [p for p in steps if p.risk == "UNKNOWN" and not p.blocked_reason]
-    never = [
-        p
-        for p in steps
-        if p.blocked_reason
-        or p.risk in ("UNSUPPORTED", "PRIVILEGED", "SENSITIVE", None)
-    ]
-    if never:
+    if action.blocked:
+        never = [
+            s for s in action.steps
+            if s.blocked_reason or s.decision.requirement is Requirement.BLOCKED
+        ]  # fmt: skip
         print(f"\n{len(never)} step(s) blocked; the plan would not run.")
         return EXIT_PLAN_INVALID
+    if action.requirement is Requirement.OVERRIDE:
+        print(
+            "\nThis plan is blocked unless you override it at the prompt by "
+            "typing the exact phrase the agent shows."
+        )
     if unrecognised:
         print(
             f"\n{len(unrecognised)} step(s) not recognised by the policy; "

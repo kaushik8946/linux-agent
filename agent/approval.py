@@ -81,7 +81,15 @@ class ApprovalService:
         if requirement is Requirement.BLOCKED:
             return None
         try:
-            if requirement is Requirement.TYPED:
+            if requirement is Requirement.OVERRIDE:
+                phrase = plan.confirmation_phrase()
+                answer = self._ask(
+                    f"{rendered}\n\nThis plan contains a command the agent normally "
+                    f"refuses.\nType exactly '{phrase}' to run it once (anything "
+                    "else cancels): "
+                )
+                ok = answer.strip() == phrase
+            elif requirement is Requirement.TYPED:
                 phrase = plan.confirmation_phrase()
                 answer = self._ask(
                     f"{rendered}\n\nThis plan can destroy data.\nType exactly '{phrase}' to proceed (anything "
@@ -119,6 +127,16 @@ def render_plan(plan: ActionPlan) -> str:
             lines.append(f"     BLOCKED: {step.blocked_reason}")
         elif step.decision.requirement is Requirement.BLOCKED:
             lines.append(f"     BLOCKED: {step.decision.reason}")
+        elif step.decision.requirement is Requirement.OVERRIDE:
+            lines.append(
+                f"     NORMALLY BLOCKED: {step.decision.reason}. You can run it "
+                "once by typing the phrase below."
+            )
+            if step.decision.risk is RiskClass.PRIVILEGED:
+                lines.append(
+                    "     Runs as root. sudo may ask for your password itself; "
+                    "the agent never sees it."
+                )
         elif step.decision.risk is RiskClass.UNKNOWN:
             lines.append(
                 "     NOT RECOGNISED: the agent cannot tell what this command "

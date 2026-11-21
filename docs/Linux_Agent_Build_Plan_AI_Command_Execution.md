@@ -373,7 +373,10 @@ Requirements:
 
 - Execute with `subprocess.Popen` or `subprocess.run` using an argument
   array and `shell=False`.
-- Never pass a model-generated string to `bash -c`, `sh -c`, or a shell.
+- Never pass a model-generated string to `bash -c`, `sh -c`, or a shell
+  on the model's authority. (Later addition: the local user may run one
+  such step by typing an exact per-command override phrase; see
+  section 10.)
 - Do not use `eval` or `exec`.
 - Reject malformed plans, NUL bytes, invalid argument types, missing
   executables, unsafe paths, and unsupported execution features.
@@ -925,8 +928,10 @@ Keep these out of the first working version:
 
 - Web UI or FastAPI server.
 - Remote machine administration.
-- Unrestricted shell tool or direct `bash -c` / `sh -c` execution.
-- Autonomous root execution.
+- Unrestricted shell tool, or `bash -c` / `sh -c` execution without a
+  per-command typed user override.
+- Autonomous root execution (a `sudo` step runs only after a per-command
+  typed user override, and `sudo` asks for the password itself).
 - Automatic destructive cleanup.
 - Package removal and purge.
 - Firewall and SSH reconfiguration.
@@ -1007,3 +1012,15 @@ strings. If later versions add pipelines, redirection, or script blocks,
 they must use a dedicated parser, explicit AST representation, policy
 checks for every node, and a separate security test suite before being
 enabled.
+
+**User override (added after Build 12).** A step using a shell, a command
+wrapper, or a privilege wrapper (`sudo`, `doas`, `run0`, `pkexec`) is never
+run on the model's authority. The local user can run one such step by
+typing an exact phrase naming the command and plan, for example
+`override sudo 1a2b3c4d`; `y`/`yes` is not enough. The override is bound to
+that plan, expires, is journalled, and is not disclosed to the model, which
+receives the same fixed refusal if the user declines. It never unlocks
+credential access, the never-approvable list, `su`, root shells
+(`sudo -i`/`-s`), `sudo -S`/`-A`/`-E`/`-e`, or elevating a shell or another
+privilege wrapper. Shell scripts cannot be analysed, so the user must read
+the script shown in the preview. Tests: `tests/test_override.py`.

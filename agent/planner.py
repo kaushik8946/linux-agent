@@ -50,8 +50,11 @@ class ActionPlan:
     @property
     def has_known_change(self) -> bool:
         """A step the policy knows changes something (not merely unrecognised)."""
+        # Unrecognised and override steps are judged by the user from the
+        # preview; the model cannot be asked to describe an override it is
+        # never told about.
         return any(
-            s.decision.requirement is not Requirement.AUTO
+            s.decision.requirement not in (Requirement.AUTO, Requirement.OVERRIDE)
             and s.decision.risk is not RiskClass.UNKNOWN
             for s in self.steps
         )
@@ -64,8 +67,20 @@ class ActionPlan:
     def blocked(self) -> bool:
         return self.requirement is Requirement.BLOCKED
 
+    @property
+    def override_commands(self) -> list[str]:
+        """Executables of the steps that need a user override."""
+        return [
+            s.command.split(" ", 1)[0]
+            for s in self.steps
+            if s.decision.requirement is Requirement.OVERRIDE
+        ]
+
     def confirmation_phrase(self) -> str:
-        """Phrase the user must type for a TYPED plan (names the target)."""
+        """Phrase the user must type for a TYPED or OVERRIDE plan."""
+        if self.requirement is Requirement.OVERRIDE:
+            names = "+".join(dict.fromkeys(self.override_commands))
+            return f"override {names} {self.fingerprint[:8]}"
         return f"yes, run {len(self.steps)} step(s) {self.fingerprint[:8]}"
 
 
@@ -108,7 +123,7 @@ def build_action_plan(
                 command=preview.command,
                 working_dir=step.working_dir or default_cwd,
                 purpose=step.purpose,
-                decision=command_decision(name, risk),
+                decision=command_decision(name, risk, list(step.args)),
                 blocked_reason=preview.blocked_reason,
             )
         )

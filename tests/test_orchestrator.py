@@ -180,10 +180,13 @@ def test_stepwise_plan_reports_pending_steps_to_the_model(tmp_path: Path) -> Non
 @pytest.mark.parametrize(
     ("args", "expect", "status"),
     [
-        (plan_args(("a", "bash", ["-c", "id"])), "UNSUPPORTED", "blocked"),
+        # No approval channel: an override plan is reported to the model
+        # exactly like a blocked plan.
+        (plan_args(("a", "bash", ["-c", "id"])), "UNSUPPORTED", "approval_unavailable"),
         (plan_args(("a", "cat", ["/etc/shadow"])), "SENSITIVE", "blocked"),
         (plan_args(("a", "rm", ["-rf", "x"])), "DESTRUCTIVE", "approval_unavailable"),
-        (plan_args(("a", "sudo", ["ls"])), "PRIVILEGED", "blocked"),
+        (plan_args(("a", "sudo", ["ls"])), "PRIVILEGED", "approval_unavailable"),
+        (plan_args(("a", "sudo", ["fdisk", "/dev/sda"])), "PRIVILEGED", "blocked"),
         (
             plan_args(("a", "echo", ["ok"]), ("b", "touch", ["x"])),
             "USER_LEVEL_CHANGE",

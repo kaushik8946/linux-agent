@@ -272,6 +272,22 @@ they have dedicated validation and tests. If a request cannot be safely
 represented, explain the limitation rather than silently falling back
 to unrestricted shell execution.
 
+**User override for shells and privilege escalation.** A model-proposed
+step that uses a shell or wrapper (`bash -c`, `sh -c`, `env`, `xargs`,
+`ssh`, ...) or a privilege wrapper (`sudo`, `doas`, `run0`, `pkexec`) is
+never run on the model's say-so. The local user may run one such step by
+typing an exact override phrase that names the command and the plan
+(for example `override sudo 1a2b3c4d`). A plain `y`/`yes` is not enough.
+The override is bound to that exact plan, expires like any approval, is
+journalled, and is not disclosed to the model: if the user declines, the
+model receives the same fixed refusal as before. Even with an override,
+credential access, the never-approvable list (disk, firewall, account,
+boot and power changes), `su`, root shells (`sudo -i`/`-s`), password or
+environment passing (`sudo -S`/`-A`/`-E`), `sudo -e`, and elevation of a
+shell or another privilege wrapper stay blocked. A privileged step keeps
+the terminal so `sudo` can ask for the user's password itself; the agent
+never sees the password.
+
 ------------------------------------------------------------------------
 
 ## 3. Architecture
@@ -823,7 +839,7 @@ This is a core architectural requirement, not an optional enhancement.
 | Reversible modification | Create a project directory, update a user-level environment file | Show proposed change and request approval by default |
 | System modification | Install packages, edit system configuration, restart services | Explicit approval required |
 | Destructive | Delete files, prune Docker volumes, remove packages, overwrite projects | Strong confirmation; often require typed target or phrase |
-| Privileged | `sudo`, changing ownership or permissions, firewall changes | Separate reviewed workflow; never model-authorized |
+| Privileged | `sudo`, changing ownership or permissions, firewall changes | Separate reviewed workflow, or a per-command typed user override; never model-authorized |
 
 ### 9.2 Approval must be local
 
@@ -872,8 +888,10 @@ execution uses the original argument array.
 **Version 1 execution constraints:**
 
 -   Invoke processes with `subprocess` argument arrays and `shell=False`.
--   Do not use `eval`, `exec`, `bash -c`, `sh -c`, or
-    `subprocess.run(model_generated_command, shell=True)`.
+-   Do not use `eval`, `exec`, or
+    `subprocess.run(model_generated_command, shell=True)`. Never run
+    `bash -c` or `sh -c` autonomously; such a step runs only after a
+    per-command typed user override (see above).
 -   Do not support shell expansion, command substitution, arbitrary
     redirection, or compound shell syntax in the first executor.
 -   Support multiple sequential command steps; later steps may depend
@@ -890,9 +908,10 @@ execution uses the original argument array.
     command is not refused: it is shown to the user, clearly marked as
     not recognised, and runs only after explicit local approval (default
     No). Approval is bound to the exact command and arguments. Shells,
-    command wrappers, privilege escalation, credential access and the
-    never-approvable list (disk, firewall, account, boot and power
-    changes) stay blocked and cannot be approved.
+    command wrappers and privilege escalation need a stronger per-command
+    typed user override. Credential access and the never-approvable list
+    (disk, firewall, account, boot and power changes) stay blocked and
+    cannot be approved.
 -   Validate paths, working directories, package names, service names,
     and target resources before execution.
 -   Apply timeouts, output limits, cancellation, and secret redaction.
@@ -914,6 +933,10 @@ allow the model to approve its own plan or bypass local controls.
 -   Do not configure passwordless unrestricted `sudo`.
 -   Prefer documented package-manager operations that prompt for the
     user's password through a reviewed workflow.
+-   A `sudo` step proposed by the model runs only after a per-command
+    typed user override, with an explicit command (no root shells, no
+    password or environment passing). `sudo` prompts for the password
+    on the terminal itself.
 -   Do not pipe remote scripts directly into a root shell.
 -   Never automatically change firewall, SSH, bootloader, disk
     partition, or user-account settings.

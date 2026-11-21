@@ -47,6 +47,19 @@ APPROVABLE = {
             RiskClass.UNKNOWN,
         }
     ),
+    # A user override unlocks sudo and shells for one exact plan. Credential
+    # access (SENSITIVE) is never in any set, and never-approvable commands
+    # are BLOCKED by the planner before an approval can matter.
+    Requirement.OVERRIDE: frozenset(
+        {
+            RiskClass.USER_LEVEL_CHANGE,
+            RiskClass.SYSTEM_CHANGE,
+            RiskClass.DESTRUCTIVE,
+            RiskClass.UNKNOWN,
+            RiskClass.PRIVILEGED,
+            RiskClass.UNSUPPORTED,
+        }
+    ),
 }
 
 
@@ -132,6 +145,7 @@ class ChangeExecutor:
                 fingerprint=current.fingerprint,
                 requirement=current.requirement.value,
                 approved=not problems,
+                override=current.requirement is Requirement.OVERRIDE,
                 steps=[
                     {
                         "step_id": s.step_id,

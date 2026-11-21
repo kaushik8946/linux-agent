@@ -182,6 +182,9 @@ class CommandRunner:
     ) -> None:
         self._host = host_profile
         self._policy = policy
+        # Called with True before a step takes the terminal and False after,
+        # so the CLI can pause its spinner while sudo asks for a password.
+        self.on_terminal: Callable[[bool], None] | None = None
         self.limits = limits or Limits()
         self._environ = dict(os.environ if environ is None else environ)
         self._allowed_risks = allowed_risks
@@ -394,8 +397,10 @@ class CommandRunner:
             lines.append(f"{n}. [{item.risk or 'REJECTED'}] {item.command}")
             if item.blocked_reason:
                 lines.append(f"   BLOCKED - {item.blocked_reason}")
-            elif item.risk in ("UNSUPPORTED", "PRIVILEGED", "SENSITIVE"):
+            elif item.risk == "SENSITIVE":
                 lines.append("   BLOCKED - never run by this agent")
+            elif item.risk in ("UNSUPPORTED", "PRIVILEGED") and not gate:
+                lines.append("   BLOCKED unless you override it at the prompt")
             lines.append(f"   purpose: {item.purpose}")
         return "\n".join(lines)
 
@@ -506,16 +511,28 @@ class CommandRunner:
                 **kw,
             )
 
+        # An approved privileged step (sudo ...) keeps the terminal so sudo can
+        # ask the user for a password on /dev/tty; the agent never sees it.
+        # Everything else runs detached, with no terminal and its own session.
+        interactive = p.classification.risk is RiskClass.PRIVILEGED
+        if interactive and self.on_terminal is not None:
+            self.on_terminal(True)
         try:
             proc = subprocess.Popen(
                 p.argv,
                 shell=False,
-                stdin=subprocess.PIPE if stdin_data is not None else subprocess.DEVNULL,
+                stdin=(
+                    subprocess.PIPE
+                    if stdin_data is not None
+                    else None
+                    if interactive
+                    else subprocess.DEVNULL
+                ),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 cwd=p.cwd,
                 env=p.env,
-                start_new_session=True,
+                start_new_session=not interactive,
                 close_fds=True,
             )
         except (OSError, ValueError) as exc:
@@ -535,6 +552,7 @@ class CommandRunner:
             )
             writer.start()
 
+        proc_group = not interactive
         deadline = started + p.timeout
         timed_out = cancelled = False
         try:
@@ -548,16 +566,18 @@ class CommandRunner:
                 else:
                     cancel.wait(0.02)
                     continue
-                self._terminate(proc)
+                self._terminate(proc, proc_group)
                 break
         except BaseException:  # includes Ctrl+C: never leave a process behind
-            self._terminate(proc)
+            self._terminate(proc, proc_group)
             raise
         finally:
+            if interactive and self.on_terminal is not None:
+                self.on_terminal(False)
             for r in readers:
                 r.join(1.0)
             if any(r.is_alive() for r in readers):
-                _kill_group(proc, signal.SIGKILL)  # children holding the pipes
+                _kill(proc, signal.SIGKILL, proc_group)  # children holding the pipes
                 for r in readers:
                     r.join(1.0)
             if writer:
@@ -612,13 +632,13 @@ class CommandRunner:
             return encoded[:cap].decode("utf-8", errors="ignore"), True
         return text, False
 
-    def _terminate(self, proc: subprocess.Popen[bytes]) -> None:
-        _kill_group(proc, signal.SIGTERM)
+    def _terminate(self, proc: subprocess.Popen[bytes], group: bool = True) -> None:
+        _kill(proc, signal.SIGTERM, group)
         try:
             proc.wait(timeout=self.limits.kill_grace)
         except subprocess.TimeoutExpired:
             pass
-        _kill_group(proc, signal.SIGKILL)  # also reaps stragglers in the group
+        _kill(proc, signal.SIGKILL, group)  # also reaps stragglers in the group
         try:
             proc.wait(timeout=self.limits.kill_grace)
         except subprocess.TimeoutExpired:
@@ -671,8 +691,13 @@ def _feed(stream: Any, data: bytes) -> None:
         pass
 
 
-def _kill_group(proc: subprocess.Popen[bytes], sig: int) -> None:
+def _kill(proc: subprocess.Popen[bytes], sig: int, group: bool = True) -> None:
+    """Signal the step's process group, or only the process when it shares
+    the agent's group (never signal the agent's own group)."""
     try:
-        os.killpg(proc.pid, sig)
+        if group:
+            os.killpg(proc.pid, sig)
+        elif proc.poll() is None:
+            proc.send_signal(sig)
     except (ProcessLookupError, PermissionError):
         pass

@@ -79,9 +79,9 @@ class Prompt:
         (RiskClass.USER_LEVEL_CHANGE, Requirement.CONFIRM),
         (RiskClass.SYSTEM_CHANGE, Requirement.CONFIRM),
         (RiskClass.DESTRUCTIVE, Requirement.TYPED),
-        (RiskClass.PRIVILEGED, Requirement.BLOCKED),
+        (RiskClass.PRIVILEGED, Requirement.OVERRIDE),
         (RiskClass.UNKNOWN, Requirement.CONFIRM),
-        (RiskClass.UNSUPPORTED, Requirement.BLOCKED),
+        (RiskClass.UNSUPPORTED, Requirement.OVERRIDE),
         (RiskClass.SENSITIVE, Requirement.BLOCKED),
     ],
 )
@@ -133,8 +133,13 @@ def test_destructive_plan_requires_typed_confirmation(tmp_path: Path) -> None:
 
 
 def test_blocked_step_blocks_the_whole_plan(tmp_path: Path) -> None:
-    plan = action(tmp_path, raw(("a", "mkdir", ["x"]), ("b", "bash", ["-c", "id"])))
+    plan = action(tmp_path, raw(("a", "mkdir", ["x"]), ("b", "cat", ["/etc/shadow"])))
     assert plan.blocked
+
+
+def test_shell_step_makes_the_whole_plan_need_an_override(tmp_path: Path) -> None:
+    plan = action(tmp_path, raw(("a", "mkdir", ["x"]), ("b", "bash", ["-c", "id"])))
+    assert not plan.blocked and plan.requirement is Requirement.OVERRIDE
 
 
 def test_unresolvable_executable_blocks_the_plan(tmp_path: Path) -> None:
@@ -234,7 +239,7 @@ def test_destructive_requires_exact_typed_phrase(tmp_path: Path) -> None:
 
 def test_blocked_plan_never_prompts(tmp_path: Path) -> None:
     prompt = Prompt("y")
-    plan = action(tmp_path, raw(("a", "bash", ["-c", "id"])))
+    plan = action(tmp_path, raw(("a", "cat", ["/etc/shadow"])))
     assert ApprovalService(prompt).request(plan, "x") is None
     assert prompt.questions == []
 

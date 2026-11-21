@@ -72,7 +72,7 @@ WRAPPERS = frozenset(
         "gdb",
     }
 )
-PRIVILEGED = frozenset({"sudo", "su", "doas", "pkexec", "run0"})
+PRIVILEGED = frozenset({"sudo", "sudoedit", "su", "doas", "pkexec", "run0"})
 DESTRUCTIVE = frozenset(
     {
         "rm",

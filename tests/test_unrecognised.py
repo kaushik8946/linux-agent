@@ -113,11 +113,11 @@ def test_unrecognised_mixed_with_blocked_still_blocks_everything(
     marker = tmp_path / "ran"
     data = raw(
         ("a", "python3", ["-c", f"open({str(marker)!r}, 'w')"]),
-        ("b", "bash", ["-c", "id"]),
+        ("b", "cat", ["/etc/shadow"]),
     )
     plan, action = env.plan(data)
     assert action.blocked
-    forged = Approval(action.fingerprint, env.now[0], Requirement.CONFIRM)
+    forged = Approval(action.fingerprint, env.now[0], Requirement.OVERRIDE)
     assert env.executor.execute(plan, action, forged).status == "rejected"
     assert not marker.exists()
 
@@ -125,11 +125,9 @@ def test_unrecognised_mixed_with_blocked_still_blocks_everything(
 @pytest.mark.parametrize(
     "step",
     [
-        ("a", "bash", ["-c", "id"]),
-        ("a", "sh", ["-c", "id"]),
-        ("a", "env", ["id"]),
-        ("a", "xargs", ["id"]),
-        ("a", "sudo", ["id"]),
+        ("a", "sudo", ["fdisk", "/dev/sda"]),
+        ("a", "sudo", ["cat", "/etc/shadow"]),
+        ("a", "sudo", []),
         ("a", "su", ["-c", "id"]),
         ("a", "cat", ["/etc/shadow"]),
         ("a", "fdisk", ["/dev/sda"]),
@@ -142,8 +140,9 @@ def test_never_runnable_commands_are_still_blocked(
     env = Env(tmp_path, "y")
     plan, action = env.plan(raw(step))
     assert action.blocked
-    forged = Approval(action.fingerprint, env.now[0], Requirement.TYPED)
-    assert env.executor.execute(plan, action, forged).status == "rejected"
+    for level in (Requirement.TYPED, Requirement.OVERRIDE):
+        forged = Approval(action.fingerprint, env.now[0], level)
+        assert env.executor.execute(plan, action, forged).status == "rejected"
 
 
 def test_unrecognised_command_output_is_untrusted_and_journalled(

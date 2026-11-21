@@ -174,6 +174,21 @@ class Session:
         if approvals is not None:
             approvals.set_prompt(self.approval_prompt(status))
         self.orchestrator.set_listener(self._listener(status))
+        runner = getattr(self.orchestrator, "runner", None)
+
+        def terminal(taken: bool) -> None:
+            # sudo may prompt for a password on the terminal: pause the spinner.
+            if taken:
+                status.stop()
+                self.console.print(
+                    "[dim]  (sudo may ask for your password; the agent never "
+                    "sees it)[/dim]"
+                )
+            else:
+                status.start()
+
+        if runner is not None:
+            runner.on_terminal = terminal
         try:
             with status:
                 result = self.orchestrator.ask(request, cancel)
@@ -183,6 +198,8 @@ class Session:
             return None
         finally:
             self.orchestrator.set_listener(None)
+            if runner is not None:
+                runner.on_terminal = None
         self.show_result(result)
         return result
 

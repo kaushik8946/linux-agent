@@ -161,23 +161,32 @@ the next command from what it observed.
 
 - **No shell.** Commands run with `shell=False` from an argument array.
   `$()`, `|`, `;`, `>` and `*` stay literal text. Shells and wrappers (`bash`,
-  `env`, `xargs`, `ssh`, ...) are rejected.
+  `env`, `xargs`, `ssh`, ...) are refused unless you override them (below).
 - **Read-only by default.** A command runs automatically only if the policy
   positively recognises it as read-only.
 - **Unrecognised commands ask you.** A command the policy has no rule for (for
   example `g++ --version`, `git`, `python3`) is not refused. It is shown marked
   "NOT RECOGNISED" and runs only if you approve it; the default is No. The
   agent therefore works with tools nobody has classified yet.
-- **Some things can never be approved:** shells and wrappers (`bash`, `env`,
-  `xargs`, `ssh`, ...), `sudo` and similar, commands touching credentials, and
-  disk, firewall, account, boot and power commands. If any step in a plan is
-  blocked this way, nothing in that plan runs. Dangerous flags on safe tools
-  (`find -exec`, `tail -f`, `ps e`) are treated as unrecognised, so they ask
-  you rather than run automatically.
-- **Privilege is blocked in command plans.** `sudo` and similar wrappers are
-  refused there. Elevation happens only inside the dedicated adapters, as a
-  fixed `sudo -- <absolute path> ...` command. The agent never sees your
-  password.
+- **Shells and `sudo` need your override.** A step using a shell or wrapper
+  (`bash -c`, `env`, `xargs`, `ssh`, ...) or a privilege wrapper (`sudo`,
+  `doas`, `run0`, `pkexec`) is shown as "NORMALLY BLOCKED". It runs only if you
+  type the exact phrase shown, for example `override sudo 1a2b3c4d`; `y` is not
+  enough. The override covers that one plan and expires after 5 minutes. For
+  `sudo`, sudo itself asks for your password on the terminal; the agent never
+  sees it. The model is not told overrides exist, so it cannot steer you
+  toward one; if you decline, it gets the usual refusal. Read a shell script
+  carefully before overriding: the agent cannot tell what it does.
+- **Some things can never be run, even with an override:** commands touching
+  credentials; disk, firewall, account, boot and power commands (also via
+  `sudo`); `su`, root shells (`sudo -i`, `sudo -s`), `sudo -S`, `-A`, `-E`
+  and `-e`; and `sudo` of a shell or another privilege wrapper. If any step in
+  a plan is blocked this way, nothing in that plan runs. Dangerous flags on
+  safe tools (`find -exec`, `tail -f`, `ps e`) are treated as unrecognised, so
+  they ask you rather than run automatically.
+- **Typed operations use their own elevation.** Package installs and service
+  starts elevate inside their adapters with a fixed
+  `sudo -- <absolute path> ...` command, after a normal approval.
 - **Model approval is ignored.** An `approved` flag or any other approval field
   in model output is rejected. Approval comes only from your answer at the
   prompt.
