@@ -15,6 +15,7 @@ from hostplatform.docker import DockerClient
 from hostplatform.envstore import EnvStore
 from hostplatform.packages.apt import AptAdapter
 from hostplatform.services.systemd import SystemdAdapter
+from tools.devtools import register_dev_tools
 from tools.docker import register_docker_tools
 from tools.docker_ops import register_docker_operations
 from tools.envvars import register_env_tools
@@ -47,6 +48,7 @@ def register_host_adapters(
         apt = AptAdapter(shutil.which, is_root)
         if apt.available():
             register_package_tools(registry, apt)
+            register_dev_tools(registry, apt)
             enabled.append("apt")
     sm = host.service_manager
     if sm.name == "systemd" and sm.state == "running":
