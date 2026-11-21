@@ -18,6 +18,7 @@ from hostplatform.services.systemd import SystemdAdapter
 from tools.docker import register_docker_tools
 from tools.docker_ops import register_docker_operations
 from tools.envvars import register_env_tools
+from tools.network import register_network_tools
 from tools.packages import register_package_tools, register_service_tools
 from tools.workspace import register_workspace_tools
 
@@ -31,6 +32,8 @@ def register_host_adapters(
     enabled: list[str] = []
     register_env_tools(registry, EnvStore(home or Path.home()), shutil.which("sh"))
     enabled.append("env")
+    register_network_tools(registry)
+    enabled.append("network")
     if workspace_root is not None:
         register_workspace_tools(registry, workspace_root)
         enabled.append("workspace")
