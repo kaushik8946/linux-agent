@@ -119,64 +119,88 @@ shared toolset.
 **Purpose:** Take a newly installed machine running a supported Linux
 distribution and prepare it according to the user's requirements.
 
-Expected workflow: 1. Discover Linux distribution and release,
-architecture, CPU, memory, storage, network connectivity, package
-manager, privileges, and pre-installed software. 2. Ask what the user
-wants the machine to be used for and which applications or development
-components are required. 3. Search current web sources for supported
-installation methods and compatibility. 4. Compare available methods,
-versions, sources, update behavior, privilege requirements, and
-trade-offs. 5. Let the user choose the applications and installation
-methods. 6. Build a setup plan showing packages, repositories,
-configuration files, services, ports, dependencies, and expected impact.
-7. Detect conflicts and pre-existing data before changing the system. 8.
-Request local approval for system modifications. 9. Install and
-configure selected applications and components using reviewed
-procedures. 10. Verify versions, paths, services, connectivity, and
-functional behavior. 11. Generate a provisioning report with sources,
-choices, changes, and verification results.
+Expected workflow:
 
-Example requests: - "Prepare this fresh Linux machine for software
-development." - "Set up this machine according to the applications I
-select." - "Search for installation options for this application and let
-me choose." - "Install these applications using the methods I
-approve." - "Configure a complete development environment, but show me
-the plan first."
+1. Discover Linux distribution and release, architecture, CPU, memory,
+   storage, network connectivity, package manager, privileges, and pre-installed
+   software.
+2. Ask what the user wants the machine to be used for and which
+   applications or development components are required.
+3. Search current web sources for supported installation methods and
+   compatibility.
+4. Compare available methods, versions, sources, update behavior,
+   privilege requirements, and trade-offs.
+5. Let the user choose the applications and installation methods.
+6. Build a setup plan showing packages, repositories, configuration
+   files, services, ports, dependencies, and expected impact.
+7. Detect conflicts and pre-existing data before changing the system.
+8. Request local approval for system modifications.
+9. Install and configure selected applications and components using
+   reviewed procedures.
+10. Verify versions, paths, services, connectivity, and functional
+    behavior.
+11. Generate a provisioning report with sources, choices, changes, and
+    verification results.
+
+Example requests:
+
+- "Prepare this fresh Linux machine for software development."
+- "Set up this machine according to the applications I select."
+- "Search for installation options for this application and let me
+  choose."
+- "Install these applications using the methods I approve."
+- "Configure a complete development environment, but show me the plan
+  first."
 
 #### Mode B --- Existing Linux administration
 
 **Purpose:** Investigate, troubleshoot, configure, install, repair, and
 maintain an existing system on any supported Linux distribution.
 
-Expected workflow: 1. Understand the desired outcome or reported
-problem. 2. Inspect only the relevant system state, configuration, logs,
-packages, services, processes, and network details. 3. Identify observed
-facts and likely root causes; do not assume the first visible symptom is
-the cause. 4. Search current documentation or known issue reports when
-the problem or software behavior requires current information. 5. Build
-a plan with proposed commands, files to change, risks, alternatives, and
-expected results. 6. Request local approval for modifications according
-to the risk policy. 7. Execute approved changes through registered tools
-and controlled command execution. 8. Re-run relevant checks to verify
-whether the original issue is resolved. 9. Explain the root cause,
-actions performed, verification results, and remaining concerns. 10.
-Generate a troubleshooting or maintenance report when useful.
+Expected workflow:
 
-Example requests: - "Why is this environment variable missing? Find the
-cause and fix it." - "Investigate why this service is failing." - "Find
-what is consuming my disk space and suggest safe cleanup." - "Diagnose
-this network or DNS issue." - "Set up the dependencies needed to run
-this project." - "Repair this development environment without deleting
-my existing work."
+1. Understand the desired outcome or reported problem.
+2. Inspect only the relevant system state, configuration, logs,
+   packages, services, processes, and network details.
+3. Identify observed facts and likely root causes; do not assume the
+   first visible symptom is the cause.
+4. Search current documentation or known issue reports when the problem
+   or software behavior requires current information.
+5. Build a plan with proposed commands, files to change, risks,
+   alternatives, and expected results.
+6. Request local approval for modifications according to the risk
+   policy.
+7. Execute approved changes through registered tools and controlled
+   command execution.
+8. Re-run relevant checks to verify whether the original issue is
+   resolved.
+9. Explain the root cause, actions performed, verification results, and
+   remaining concerns.
+10. Generate a troubleshooting or maintenance report when useful.
+
+Example requests:
+
+- "Why is this environment variable missing? Find the cause and fix it."
+- "Investigate why this service is failing."
+- "Find what is consuming my disk space and suggest safe cleanup."
+- "Diagnose this network or DNS issue."
+- "Set up the dependencies needed to run this project."
+- "Repair this development environment without deleting my existing
+  work."
 
 #### Shared engine
 
-Both modes must use the same components: - Natural-language request
-understanding. - System discovery and evidence collection. - Web
-research and source evaluation. - Task planning and option comparison. -
-Tool registry and controlled command executor. - Risk classification and
-local approval. - Python and Bash automation. - Post-change
-verification. - Audit logging and report generation.
+Both modes must use the same components:
+
+- Natural-language request understanding.
+- System discovery and evidence collection.
+- Web research and source evaluation.
+- Task planning and option comparison.
+- Tool registry and controlled command executor.
+- Risk classification and local approval.
+- Python and Bash automation.
+- Post-change verification.
+- Audit logging and report generation.
 
 The operating mode determines the workflow emphasis, not a separate
 codebase. The agent may move between provisioning and administration
@@ -184,45 +208,14 @@ during a single conversation when the user's task requires it.
 
 ### 2.2 Initial modules
 
-  -----------------------------------------------------------------------
-  Module                  Initial capabilities    Default risk
-  ----------------------- ----------------------- -----------------------
-  Environment management  Inspect, add, update,   Modification requires
-                          and remove environment  approval
-                          variables; manage       
-                          user-level shell        
-                          configuration           
-
-  System diagnostics      OS, kernel, CPU,        Read-only
-                          memory, disk, storage,  
-                          uptime, processes,      
-                          network and service     
-                          checks                  
-
-  Docker management       Docker status,          Inspection is
-                          containers, images,     read-only; cleanup
-                          disk usage, logs, safe  requires approval
-                          cleanup                 
-
-  Development environment Detect and install      Installation requires
-  installation            selected tools such as  approval
-                          Git, Python, Java,      
-                          Node.js and Docker;     
-                          verify versions         
-
-  Project initialization  Create selected project File creation requires
-                          templates and starter   approval or an explicit
-                          files in an approved    workspace policy
-                          workspace               
-
-  Troubleshooting reports Collect diagnostic      Collection is
-                          evidence, summarize     read-only; fixes
-                          likely causes,          require approval
-                          recommend fixes, export 
-                          Markdown/JSON reports   
-                          ning Install and        
-                          configu                 
-  -----------------------------------------------------------------------
+| Module | Initial capabilities | Default risk |
+| --- | --- | --- |
+| Environment management | Inspect, add, update, and remove environment variables; manage user-level shell configuration | Modification requires approval |
+| System diagnostics | OS, kernel, CPU, memory, disk, storage, uptime, processes, network and service checks | Read-only |
+| Docker management | Docker status, containers, images, disk usage, logs, safe cleanup | Inspection is read-only; cleanup requires approval |
+| Development environment installation | Detect and install selected tools such as Git, Python, Java, Node.js and Docker; verify versions | Installation requires approval |
+| Project initialization | Create selected project templates and starter files in an approved workspace | File creation requires approval or an explicit workspace policy |
+| Troubleshooting reports | Collect diagnostic evidence, summarize likely causes, recommend fixes, export Markdown/JSON reports | Collection is read-only; fixes require approval |
 
 ### Fresh setup is in scope
 
@@ -551,44 +544,18 @@ do not create empty abstractions just to fill the directory tree.
 
 ## 5. Technology Choices
 
-  -----------------------------------------------------------------------
-  Area                    Recommended technology  Reason
-  ----------------------- ----------------------- -----------------------
-  Main language           Python 3                Good subprocess,
-                                                  filesystem, API and
-                                                  testing support
-
-  OS automation           Bash                    Native Linux
-                                                  administration and
-                                                  shell configuration
-
-  LLM client              OpenAI Python SDK       Supports
-                                                  OpenAI-compatible
-                                                  endpoints through a
-                                                  custom base URL
-
-  Configuration           `python-dotenv`         Simple local `.env`
-                                                  configuration
-
-  CLI output              `rich`                  Readable tables, status
-                                                  and prompts
-
-  Validation              Pydantic or explicit    Validate tool inputs
-                          Python validation       and configuration
-
-  Tests                   `pytest`                Unit and integration
-                                                  testing
-
-  Reports                 Markdown and JSON       Human-readable and
-                                                  machine-readable output
-
-  Optional state          SQLite                  Session metadata and
-                                                  execution history if
-                                                  needed
-
-  Future web UI           FastAPI plus frontend   Optional later phase;
-                                                  reuse agent services
-  -----------------------------------------------------------------------
+| Area | Recommended technology | Reason |
+| --- | --- | --- |
+| Main language | Python 3 | Good subprocess, filesystem, API and testing support |
+| OS automation | Bash | Native Linux administration and shell configuration |
+| LLM client | OpenAI Python SDK | Supports OpenAI-compatible endpoints through a custom base URL |
+| Configuration | `python-dotenv` | Simple local `.env` configuration |
+| CLI output | `rich` | Readable tables, status and prompts |
+| Validation | Pydantic or explicit Python validation | Validate tool inputs and configuration |
+| Tests | `pytest` | Unit and integration testing |
+| Reports | Markdown and JSON | Human-readable and machine-readable output |
+| Optional state | SQLite | Session metadata and execution history if needed |
+| Future web UI | FastAPI plus frontend | Optional later phase; reuse agent services |
 
 Avoid adding a large agent framework initially. A small explicit
 tool-calling loop is easier to inspect, secure, and debug.
@@ -619,23 +586,13 @@ capability and target package manager have been validated.
 
 Common package-manager families include:
 
-  -----------------------------------------------------------------------
-  Distribution family     Examples                Typical package manager
-  ----------------------- ----------------------- -----------------------
-  Debian family           Debian, Ubuntu, Linux   APT / DPKG
-                          Mint, Pop!\_OS          
-
-  Fedora / RHEL family    Fedora, RHEL, Rocky     DNF / RPM
-                          Linux, AlmaLinux        
-
-  Arch family             Arch Linux, Manjaro,    Pacman
-                          EndeavourOS             
-
-  SUSE family             openSUSE, SUSE Linux    Zypper / RPM
-                          Enterprise              
-
-  Alpine                  Alpine Linux            APK
-  -----------------------------------------------------------------------
+| Distribution family | Examples | Typical package manager |
+| --- | --- | --- |
+| Debian family | Debian, Ubuntu, Linux Mint, Pop!\_OS | APT / DPKG |
+| Fedora / RHEL family | Fedora, RHEL, Rocky Linux, AlmaLinux | DNF / RPM |
+| Arch family | Arch Linux, Manjaro, EndeavourOS | Pacman |
+| SUSE family | openSUSE, SUSE Linux Enterprise | Zypper / RPM |
+| Alpine | Alpine Linux | APK |
 
 These are examples, not an exhaustive compatibility promise. The agent
 must detect the actual package manager and its capabilities rather than
@@ -697,10 +654,13 @@ AGENT_WORKSPACE_DIR=~/projects
 
 ### 7.1 Configuration loader
 
-`config.py` should: 1. Load `.env`. 2. Validate that the API key, base
-URL, and model are present. 3. Validate numeric timeout and iteration
-settings. 4. Expand the workspace and report paths. 5. Fail with a clear
-message when configuration is incomplete.
+`config.py` should:
+
+1. Load `.env`.
+2. Validate that the API key, base URL, and model are present.
+3. Validate numeric timeout and iteration settings.
+4. Expand the workspace and report paths.
+5. Fail with a clear message when configuration is incomplete.
 
 Example:
 
@@ -857,32 +817,13 @@ This is a core architectural requirement, not an optional enhancement.
 
 ### 9.1 Risk levels
 
-  -----------------------------------------------------------------------
-  Risk                    Examples                Policy
-  ----------------------- ----------------------- -----------------------
-  Read-only               `uname`, `free`, `df`,  May execute
-                          `docker ps`, service    automatically
-                          status                  
-
-  Reversible modification Create a project        Show proposed change
-                          directory, update a     and request approval by
-                          user-level environment  default
-                          file                    
-
-  System modification     Install packages, edit  Explicit approval
-                          system configuration,   required
-                          restart services        
-
-  Destructive             Delete files, prune     Strong confirmation;
-                          Docker volumes, remove  often require typed
-                          packages, overwrite     target or phrase
-                          projects                
-
-  Privileged              `sudo`, changing        Separate reviewed
-                          ownership or            workflow; never
-                          permissions, firewall   model-authorized
-                          changes                 
-  -----------------------------------------------------------------------
+| Risk | Examples | Policy |
+| --- | --- | --- |
+| Read-only | `uname`, `free`, `df`, `docker ps`, service status | May execute automatically |
+| Reversible modification | Create a project directory, update a user-level environment file | Show proposed change and request approval by default |
+| System modification | Install packages, edit system configuration, restart services | Explicit approval required |
+| Destructive | Delete files, prune Docker volumes, remove packages, overwrite projects | Strong confirmation; often require typed target or phrase |
+| Privileged | `sudo`, changing ownership or permissions, firewall changes | Separate reviewed workflow; never model-authorized |
 
 ### 9.2 Approval must be local
 
@@ -1005,17 +946,24 @@ allow the model to approve its own plan or bypass local controls.
 **Purpose:** Make user-level environment variable setup consistent and
 repeatable.
 
-Capabilities: - List variable names without exposing sensitive values. -
-Read a selected variable with masking where appropriate. - Set or update
-a variable in a dedicated agent-managed configuration file. - Remove a
-variable from that managed file. - Explain how to reload the shell
-configuration. - Verify values in a new shell.
+Capabilities:
 
-Recommended approach: - Manage a dedicated file such as
-`~/.config/linux-agent/env.sh`. - Source it from the user's chosen shell
-startup file only after approval. - Do not repeatedly append duplicate
-exports to `.bashrc`. - Preserve existing files and create backups
-before modification. - Support Bash first; add Zsh only when needed.
+- List variable names without exposing sensitive values.
+- Read a selected variable with masking where appropriate.
+- Set or update a variable in a dedicated agent-managed configuration
+  file.
+- Remove a variable from that managed file.
+- Explain how to reload the shell configuration.
+- Verify values in a new shell.
+
+Recommended approach:
+
+- Manage a dedicated file such as `~/.config/linux-agent/env.sh`.
+- Source it from the user's chosen shell startup file only after
+  approval.
+- Do not repeatedly append duplicate exports to `.bashrc`.
+- Preserve existing files and create backups before modification.
+- Support Bash first; add Zsh only when needed.
 
 Example generated line:
 
@@ -1034,39 +982,19 @@ host and discover which operations it actually supports.
 
 Start with broadly available checks where possible:
 
-  ---------------------------------------------------------------------
-  Area                               Discovery / checking commands or
-                                     sources
-  ---------------------------------- ----------------------------------
-  Distribution                       `/etc/os-release`; `lsb_release`
-                                     only if installed
-
-  Kernel / architecture              `uname -a`, `uname -m`
-
-  CPU                                `lscpu` when available;
-                                     `/proc/cpuinfo` as a fallback
-
-  Memory                             `free -h` when available;
-                                     `/proc/meminfo` as a fallback
-
-  Disk space                         `df -h`
-
-  Block devices                      `lsblk` when available;
-                                     `/proc/partitions` as a fallback
-
-  Uptime                             `uptime` or `/proc/uptime`
-
-  Processes                          `ps`
-
-  Network                            `ip addr`, `ip route`; detect
-                                     alternatives if `ip` is absent
-
-  Services                           Use the detected service-manager
-                                     adapter
-
-  Package state                      Use the detected package-manager
-                                     adapter
-  ---------------------------------------------------------------------
+| Area  | Discovery / checking commands or sources |
+| --- | --- |
+| Distribution | `/etc/os-release`; `lsb_release` only if installed |
+| Kernel / architecture | `uname -a`, `uname -m` |
+| CPU | `lscpu` when available; `/proc/cpuinfo` as a fallback |
+| Memory | `free -h` when available; `/proc/meminfo` as a fallback |
+| Disk space | `df -h` |
+| Block devices | `lsblk` when available; `/proc/partitions` as a fallback |
+| Uptime | `uptime` or `/proc/uptime` |
+| Processes | `ps` |
+| Network | `ip addr`, `ip route`; detect alternatives if `ip` is absent |
+| Services | Use the detected service-manager adapter |
+| Package state | Use the detected package-manager adapter |
 
 Diagnostics should be read-only and report missing commands or
 unsupported capabilities as warnings rather than failing the entire
@@ -1085,31 +1013,44 @@ profiles, SSH configuration contents, and full process arguments.
 
 **Purpose:** Inspect Docker and perform controlled maintenance.
 
-Read-only operations: - Check whether the Docker CLI is installed. -
-Check whether the daemon is reachable. - List running and stopped
-containers. - List images and volumes. - Inspect Docker disk usage. -
-Read a bounded number of recent log lines from a specified container.
+Read-only operations:
 
-Modifying operations: - Stop or remove a specified container. - Remove a
-specified image. - Prune unused resources. - Remove volumes only through
-a separate high-risk workflow.
+- Check whether the Docker CLI is installed.
+- Check whether the daemon is reachable.
+- List running and stopped containers.
+- List images and volumes.
+- Inspect Docker disk usage.
+- Read a bounded number of recent log lines from a specified container.
 
-Important distinction: - `docker system prune` and
-`docker system prune -a` have different effects. - Volume pruning can
-remove persistent data. - Never include `--volumes` in a default cleanup
-operation. - Show the proposed command and expected scope before
-approval. - Do not assume a stopped container or unused image is
-disposable.
+Modifying operations:
+
+- Stop or remove a specified container.
+- Remove a specified image.
+- Prune unused resources.
+- Remove volumes only through a separate high-risk workflow.
+
+Important distinction:
+
+- `docker system prune` and `docker system prune -a` have different
+  effects.
+- Volume pruning can remove persistent data.
+- Never include `--volumes` in a default cleanup operation.
+- Show the proposed command and expected scope before approval.
+- Do not assume a stopped container or unused image is disposable.
 
 ### 10.4 Development Environment Installation
 
 **Purpose:** Detect, install, and verify commonly used development
 tools.
 
-Initial candidates: - Git - Python and Python virtual-environment
-support - Java JDK - Node.js and npm - Docker Engine or Docker CLI,
-depending on the user's requirements - Build tools needed by selected
-project templates
+Initial candidates:
+
+- Git
+- Python and Python virtual-environment support
+- Java JDK
+- Node.js and npm
+- Docker Engine or Docker CLI, depending on the user's requirements
+- Build tools needed by selected project templates
 
 For each tool, implement three distinct operations:
 
@@ -1133,14 +1074,22 @@ repository commands indefinitely.
 **Purpose:** Create repeatable project structures in an approved
 workspace.
 
-Initial templates: - Python CLI project - Spring Boot project -
-React/Vite project
+Initial templates:
 
-A project generator should: - Validate the project name. - Restrict
-output to the configured workspace. - Check whether the target directory
-already exists. - Preview the files it intends to create. - Require
-approval before writing. - Avoid overwriting files. - Include a README
-and `.gitignore`. - Offer Git initialization as a separate action.
+- Python CLI project
+- Spring Boot project
+- React/Vite project
+
+A project generator should:
+
+- Validate the project name.
+- Restrict output to the configured workspace.
+- Check whether the target directory already exists.
+- Preview the files it intends to create.
+- Require approval before writing.
+- Avoid overwriting files.
+- Include a README and `.gitignore`.
+- Offer Git initialization as a separate action.
 
 Keep templates as ordinary files in `templates/`, not as large strings
 inside the agent logic.
@@ -1148,7 +1097,7 @@ inside the agent logic.
 For generated projects, record template version and selected options in
 a small metadata file if useful.
 
-### 10.7 Web Search and Installation Option Discovery
+### 10.6 Web Search and Installation Option Discovery
 
 **Purpose:** Research current, relevant installation choices before the
 agent proposes changes to the Linux system.
@@ -1191,45 +1140,32 @@ policy, and user requirements.
 
 When multiple valid methods exist, show a concise comparison such as:
 
-  -----------------------------------------------------------------------
-  Option                  Typical characteristics Considerations
-  ----------------------- ----------------------- -----------------------
-  Native distribution     age Integrated system   with the Version may
-  pack repository         package manager;        differ from upstream
-                          familiar updates        latest
-
-  Official vendor         May provide newer or    Adds a repository and
-  repository              vendor-supported        signing-key trust
-                          packages                decision
-
-  Standalone package /    Can provide a specific  Updates may need
-  release artifact        version                 separate handling
-
-  Language-specific       Convenient for language May not be suitable for
-  package manager         ecosystems and isolated system services
-                          tools                   
-
-  Container-based         Isolates application    Requires container
-  installation            dependencies            runtime, storage and
-                                                  networking decisions
-
-  Build from source       Maximum control over    More complex; user owns
-                          build options           build and update
-                                                  maintenance
-  -----------------------------------------------------------------------
+| Option | Typical characteristics | Considerations |
+| --- | --- | --- |
+| Native distribution package repository | Integrated system package manager; familiar updates | Version may differ from upstream latest |
+| Official vendor repository | May provide newer or vendor-supported packages | Adds a repository and signing-key trust decision |
+| Standalone package / release artifact | Can provide a specific version | Updates may need separate handling |
+| Language-specific package manager | Convenient for language ecosystems and isolated tools | May not be suitable for system services |
+| Container-based installation | Isolates application dependencies | Requires container runtime, storage and networking decisions |
+| Build from source | Maximum control over build options | More complex; user owns build and update maintenance |
 
 These are categories, not a promise that every application supports
 every method. The agent must only show options supported by current
 evidence.
 
-For each real option, include: - Method and package/source name. -
-Official or authoritative source link. - Supported Linux distribution
-and releases and architecture, if documented. - Available version or
-release channel, if verified. - Whether it adds a repository, signing
-key, service, user, or firewall rule. - Privilege requirements. - Update
-and removal approach. - Main benefits, limitations, and maintenance
-implications. - Any uncertainty or information that could not be
-verified.
+For each real option, include:
+
+- Method and package/source name.
+- Official or authoritative source link.
+- Supported Linux distribution and releases and architecture, if
+  documented.
+- Available version or release channel, if verified.
+- Whether it adds a repository, signing key, service, user, or firewall
+  rule.
+- Privilege requirements.
+- Update and removal approach.
+- Main benefits, limitations, and maintenance implications.
+- Any uncertainty or information that could not be verified.
 
 The agent should identify a recommended option when the evidence
 supports one, but must still show alternatives when they are materially
@@ -1334,21 +1270,25 @@ The last example is a removal workflow and must use a separate,
 higher-risk approval process. The agent must never assume that removing
 an application also authorizes deleting its configuration or user data.
 
-### 10.8 Fresh Setup and Workstation Provisioning
+### 10.7 Fresh Setup and Workstation Provisioning
 
 **Purpose:** Turn a clean Linux installation into a configured, verified
 development workstation or service host. Fresh setup is a general
 capability for user-selected software; the project must not be
 hard-coded around a particular new application.
 
-The agent should support: - **Single-application setup:** install one
-application selected by the user. - **Multi-component setup:** prepare a
-machine with a user-selected set of development tools and services. -
-**Client-only setup:** install command-line or desktop client components
-without installing or enabling a local server, when the software
-supports that distinction. - **Existing-installation handling:**
-inspect, repair, upgrade, or configure an existing installation rather
-than assuming the machine is empty.
+The agent should support:
+
+- **Single-application setup:** install one application selected by the
+  user.
+- **Multi-component setup:** prepare a machine with a user-selected set
+  of development tools and services.
+- **Client-only setup:** install command-line or desktop client
+  components without installing or enabling a local server, when the
+  software supports that distinction.
+- **Existing-installation handling:** inspect, repair, upgrade, or
+  configure an existing installation rather than assuming the machine is
+  empty.
 
 #### Provisioning workflow
 
@@ -1399,49 +1339,33 @@ than assuming the machine is empty.
 The actual choices must be researched for the application requested.
 Depending on what the publisher supports, possible methods may include:
 
-  -----------------------------------------------------------------------
-  Method                  Typical characteristics Considerations
-  ----------------------- ----------------------- -----------------------
-  Native distribution     age Integrated system   with the Version and
-  pack repository         package manager         release cadence may
-                                                  differ from upstream
-
-  Official vendor         May provide             Adds a repository and
-  repository              vendor-supported or     signing-key trust
-                          newer packages          decision
-
-  Standalone package or   Can provide a specific  Updates may need
-  release artifact        version                 separate handling
-
-  Language-specific       Convenient for language Not always appropriate
-  package manager         ecosystems and isolated for system-wide
-                          tools                   services
-
-  Container-based         Isolates application    Requires runtime,
-  installation            dependencies            storage, networking and
-                                                  lifecycle decisions
-
-  Build from source       Offers control over     More complex; user owns
-                          build options           build and update
-                                                  maintenance
-
-  Official installer or   May provide a           Must verify provenance,
-  setup utility           publisher-supported     integrity, privileges
-                          setup flow              and update behavior
-  -----------------------------------------------------------------------
+| Method | Typical characteristics | Considerations |
+| --- | --- | --- |
+| Native distribution package repository | Integrated system package manager | Version and release cadence may differ from upstream |
+| Official vendor repository | May provide vendor-supported or newer packages | Adds a repository and signing-key trust decision |
+| Standalone package or release artifact | Can provide a specific version | Updates may need separate handling |
+| Language-specific package manager | Convenient for language ecosystems and isolated tools | Not always appropriate for system-wide services |
+| Container-based installation | Isolates application dependencies | Requires runtime, storage, networking and lifecycle decisions |
+| Build from source | Offers control over build options | More complex; user owns build and update maintenance |
+| Official installer or setup utility | May provide a publisher-supported setup flow | Must verify provenance, integrity, privileges and update behavior |
 
 These are categories, not a promise that every application supports
 every method. The agent must show only methods supported by current
 evidence.
 
-For every viable option, show: - Installation method and package/source
-name. - Official or authoritative source link. - Supported Linux
-distributions and releases and CPU architectures, if documented. -
-Available version or release channel, if verified. - Whether it adds a
-repository, signing key, service, user, or firewall rule. - Privilege
-requirements. - Update and removal approach. - Main benefits,
-limitations, and maintenance implications. - Any uncertainty or
-information that could not be verified.
+For every viable option, show:
+
+- Installation method and package/source name.
+- Official or authoritative source link.
+- Supported Linux distributions and releases and CPU architectures, if
+  documented.
+- Available version or release channel, if verified.
+- Whether it adds a repository, signing key, service, user, or firewall
+  rule.
+- Privilege requirements.
+- Update and removal approach.
+- Main benefits, limitations, and maintenance implications.
+- Any uncertainty or information that could not be verified.
 
 #### Example prompts for fresh application installation
 
@@ -1515,13 +1439,16 @@ application does not authorize deleting its configuration or user data.
 
 #### Idempotency and repeat runs
 
-A provisioning operation should be safe to run more than once: - Detect
-installed packages and existing services before installing. - Avoid
-duplicate repository entries and environment exports. - Avoid
-overwriting existing configuration. - Distinguish "already installed and
-healthy" from "partially installed" and "installed but misconfigured." -
-Offer a repair plan for partial states. - Record what the agent changed
-so it can explain or reverse supported changes.
+A provisioning operation should be safe to run more than once:
+
+- Detect installed packages and existing services before installing.
+- Avoid duplicate repository entries and environment exports.
+- Avoid overwriting existing configuration.
+- Distinguish "already installed and healthy" from "partially installed"
+  and "installed but misconfigured."
+- Offer a repair plan for partial states.
+- Record what the agent changed so it can explain or reverse supported
+  changes.
 
 ## 11. Bash Script Standards
 
@@ -1543,15 +1470,22 @@ fail() {
 }
 ```
 
-Standards: - Quote variable expansions. - Validate required arguments. -
-Use `command -v` to detect dependencies. - Keep scripts narrowly scoped
-and reviewed; never use `eval`. These scripts are reusable helper
-procedures, not a fixed catalogue that limits the model's command
-planning. - Use timeouts for commands that may hang. - Return meaningful
-exit codes. - Send diagnostics to standard error and structured results
-to standard output where useful. - Do not silently invoke `sudo`. - Do
-not suppress all errors. - Make scripts idempotent where practical. -
-Back up files before changing them.
+Standards:
+
+- Quote variable expansions.
+- Validate required arguments.
+- Use `command -v` to detect dependencies.
+- Keep scripts narrowly scoped and reviewed; never use `eval`. These
+  scripts are reusable helper procedures, not a fixed catalogue that
+  limits the model's command planning.
+- Use timeouts for commands that may hang.
+- Return meaningful exit codes.
+- Send diagnostics to standard error and structured results to standard
+  output where useful.
+- Do not silently invoke `sudo`.
+- Do not suppress all errors.
+- Make scripts idempotent where practical.
+- Back up files before changing them.
 
 A script should not assume it is running from the project root. Resolve
 its own location or receive explicit paths.
@@ -1567,14 +1501,19 @@ browser-based approvals, or web-server deployment to Version 1.
 
 ### 12.1 Command-line interface
 
-The CLI should provide: - Interactive natural-language prompt loop. -
-Direct commands for common deterministic operations. - `help`, `exit`,
-and `quit`. - Clear progress updates for investigation, research,
-planning, execution, and verification. - Readable tables and structured
-command output. - Approval prompts before system modifications. - Strong
-typed confirmation for destructive or privileged operations. - Access to
-task history and generated reports. - Useful errors for gateway,
-permission, network, and dependency failures.
+The CLI should provide:
+
+- Interactive natural-language prompt loop.
+- Direct commands for common deterministic operations.
+- `help`, `exit`, and `quit`.
+- Clear progress updates for investigation, research, planning,
+  execution, and verification.
+- Readable tables and structured command output.
+- Approval prompts before system modifications.
+- Strong typed confirmation for destructive or privileged operations.
+- Access to task history and generated reports.
+- Useful errors for gateway, permission, network, and dependency
+  failures.
 
 The CLI should remain useful for deterministic local diagnostics even
 when the API gateway is unavailable, where the relevant direct tools do
@@ -1582,16 +1521,20 @@ not require the model.
 
 ### 12.2 Future addition: local web interface
 
-When the web UI is implemented in a later version, it may provide: - A
-chat-style natural-language interface for both operating modes. - A
-system overview showing detected OS, hardware, storage, network, and
-relevant software. - Task progress with visible investigation, research,
-plan, execution, and verification stages. - Installation-method
-comparisons and selectable options. - A reviewable action plan before
-changes are made. - In-browser approval and typed confirmation flows for
-state-changing operations. - Live or refreshable command output, with
-secrets redacted. - Task history, logs, and downloadable reports. -
-Clear display of errors, warnings, and verification results.
+When the web UI is implemented in a later version, it may provide:
+
+- A chat-style natural-language interface for both operating modes.
+- A system overview showing detected OS, hardware, storage, network, and
+  relevant software.
+- Task progress with visible investigation, research, plan, execution,
+  and verification stages.
+- Installation-method comparisons and selectable options.
+- A reviewable action plan before changes are made.
+- In-browser approval and typed confirmation flows for state-changing
+  operations.
+- Live or refreshable command output, with secrets redacted.
+- Task history, logs, and downloadable reports.
+- Clear display of errors, warnings, and verification results.
 
 The future web UI should reuse the same backend services and support the
 same provisioning and administration workflows as the CLI. It is not a
@@ -1653,8 +1596,10 @@ backend and bound to the exact pending action.
 
 ### 12.5 Running Version 1
 
-Provide separate entry points, for example: - `python main.py` --- start
-the CLI. - `python -m webapp` --- start the local web service.
+Provide separate entry points, for example:
+
+- `python main.py` --- start the CLI.
+- `python -m webapp` --- start the local web service.
 
 Both entry points must load the same configuration and shared agent
 services. The user should be able to run either interface independently,
@@ -1667,12 +1612,24 @@ without creating competing execution or approval state.
 
 ### Logs
 
-Log: - Timestamp - Session identifier - Tool name - Validated arguments,
-with sensitive values redacted - Approval decision - Execution
-duration - Exit code - Success or failure
+Log:
 
-Do not log: - API keys - Passwords - Access tokens - Private keys - Full
-unfiltered environment variables
+- Timestamp
+- Session identifier
+- Tool name
+- Validated arguments, with sensitive values redacted
+- Approval decision
+- Execution duration
+- Exit code
+- Success or failure
+
+Do not log:
+
+- API keys
+- Passwords
+- Access tokens
+- Private keys
+- Full unfiltered environment variables
 
 ### Reports
 
@@ -1690,8 +1647,12 @@ reports/
 Do not introduce a database until there is a concrete need. The first
 version can use files for reports and keep conversation state in memory.
 
-SQLite can later store: - Session metadata - Tool execution history -
-User-approved preferences - Report indexes
+SQLite can later store:
+
+- Session metadata
+- Tool execution history
+- User-approved preferences
+- Report indexes
 
 Do not store secrets or raw unrestricted command output in the database.
 
@@ -1732,58 +1693,18 @@ success. Check the actual resulting state.
 
 ### 14.2 Verification examples
 
-  ---------------------------------------------------------------------
-  Task                               Example checks (choose based on
-                                     detected capabilities)
-  ---------------------------------- ----------------------------------
-  Install an application             Query package state using the
-                                     active package adapter; check
-                                     executable path; run `--version`
-                                     or a minimal safe functional check
-
-  Install a command-line tool        `command -v <tool>`;
-                                     `<tool> --version`; execute a safe
-                                     smoke test
-
-  Configure an environment variable  Start a new shell or process with
-                                     the expected startup
-                                     configuration; print only the
-                                     selected variable, with secret
-                                     masking
-
-  Configure a service                Query the active service manager;
-                                     inspect bounded logs; verify the
-                                     expected process, socket, or
-                                     health endpoint
-
-  Configure DNS                      Inspect resolver configuration;
-                                     run a DNS lookup using an
-                                     available resolver utility;
-                                     compare with the expected answer
-
-  Configure networking               Inspect interface state, addresses
-                                     and routes; test only the intended
-                                     connectivity target
-
-  Configure storage                  Check mount table, `findmnt` if
-                                     available, filesystem type and
-                                     free space; never run destructive
-                                     filesystem checks without approval
-
-  Configure a firewall               Inspect active rules using the
-                                     detected firewall backend; verify
-                                     intended allow/deny behavior
-                                     without locking out the user
-
-  Create a project                   Check expected files, directory
-                                     structure and permissions; run the
-                                     project's safe test/build command
-                                     if configured
-
-  Repair a problem                   Repeat the original diagnostic and
-                                     compare with the pre-change
-                                     baseline
-  ---------------------------------------------------------------------
+| Task  | Example checks (choose based on detected capabilities) |
+| --- | --- |
+| Install an application | Query package state using the active package adapter; check executable path; run `--version` or a minimal safe functional check |
+| Install a command-line tool | `command -v <tool>`; `<tool> --version`; execute a safe smoke test |
+| Configure an environment variable | Start a new shell or process with the expected startup configuration; print only the selected variable, with secret masking |
+| Configure a service | Query the active service manager; inspect bounded logs; verify the expected process, socket, or health endpoint |
+| Configure DNS | Inspect resolver configuration; run a DNS lookup using an available resolver utility; compare with the expected answer |
+| Configure networking | Inspect interface state, addresses and routes; test only the intended connectivity target |
+| Configure storage | Check mount table, `findmnt` if available, filesystem type and free space; never run destructive filesystem checks without approval |
+| Configure a firewall | Inspect active rules using the detected firewall backend; verify intended allow/deny behavior without locking out the user |
+| Create a project | Check expected files, directory structure and permissions; run the project's safe test/build command if configured |
+| Repair a problem | Repeat the original diagnostic and compare with the pre-change baseline |
 
 Commands above are examples, not a fixed universal command list. The
 agent must select checks using the capability profile and task context.
@@ -1897,98 +1818,151 @@ tests. Do not test destructive operations against a personal machine.
 
 ### Phase 1 --- Foundation
 
-Deliverables: - Project skeleton. - Python virtual environment. - `.env`
-configuration. - API gateway connectivity check. - CLI prompt loop. -
-Tool registry. - Basic logging.
+Deliverables:
 
-Acceptance criteria: - The agent starts with valid configuration. -
-Missing configuration produces a useful error. - The selected model can
-complete a simple request. - API failures do not crash the application.
+- Project skeleton.
+- Python virtual environment.
+- `.env` configuration.
+- API gateway connectivity check.
+- CLI prompt loop.
+- Tool registry.
+- Basic logging.
+
+Acceptance criteria:
+
+- The agent starts with valid configuration.
+- Missing configuration produces a useful error.
+- The selected model can complete a simple request.
+- API failures do not crash the application.
 
 ### Phase 2 --- Host discovery and dynamic read-only command execution
 
-Deliverables: - Structured host capability profile. - Package-manager
-and service-manager discovery. - systemd/OpenRC and container/VM
-context detection. - Generic command-plan schema. - Dynamic command
-executor using executable/argument arrays and `shell=False`. - Bounded
-stdout/stderr capture, timeout and cancellation handling. - CLI command
-preview and execution trace. - A small number of Python context tools
-for host facts, research, and reporting.
+Deliverables:
 
-Acceptance criteria: - The user can ask for a diagnostic outcome in
-natural language. - The model decides which read-only commands to
-propose. - The executor validates and runs supported commands without
-using a shell. - Results are returned to the model for follow-up
-commands. - Missing executables and unknown capabilities are handled
-safely. - No system-modifying command can run yet.
+- Structured host capability profile.
+- Package-manager and service-manager discovery.
+- systemd/OpenRC and container/VM context detection.
+- Generic command-plan schema.
+- Dynamic command executor using executable/argument arrays and
+  `shell=False`.
+- Bounded stdout/stderr capture, timeout and cancellation handling.
+- CLI command preview and execution trace.
+- A small number of Python context tools for host facts, research, and
+  reporting.
+
+Acceptance criteria:
+
+- The user can ask for a diagnostic outcome in natural language.
+- The model decides which read-only commands to propose.
+- The executor validates and runs supported commands without using a
+  shell.
+- Results are returned to the model for follow-up commands.
+- Missing executables and unknown capabilities are handled safely.
+- No system-modifying command can run yet.
 
 ### Phase 3 --- Command risk, approval, controlled changes, and verification
 
-Deliverables: - Command-aware risk classification. - Local approval
-prompts showing exact command steps and impact. - Privilege handling
-without running the whole agent as root. - Path and environment
-restrictions. - Task success criteria and verification plans. -
-Structured verification results.
+Deliverables:
 
-Acceptance criteria: - Reliably classified read-only operations can run
-automatically. - Modifying operations require local approval. - Declined operations never
-execute. - Model output cannot bypass policy. - Each applicable
-modifying task has a verification plan and reports evidence-based
-results.
+- Command-aware risk classification.
+- Local approval prompts showing exact command steps and impact.
+- Privilege handling without running the whole agent as root.
+- Path and environment restrictions.
+- Task success criteria and verification plans.
+- Structured verification results.
+
+Acceptance criteria:
+
+- Reliably classified read-only operations can run automatically.
+- Modifying operations require local approval.
+- Declined operations never execute.
+- Model output cannot bypass policy.
+- Each applicable modifying task has a verification plan and reports
+  evidence-based results.
 
 ### Phase 4 --- Environment and development setup
 
-Deliverables: - Managed environment-variable file. - Java, Python,
-Node.js and Git detection. - Installation plans and verification. -
-Backups for changed configuration files.
+Deliverables:
 
-Acceptance criteria: - The user sees the proposed changes before
-approval. - Existing configuration is preserved. - Installation results
-are verified.
+- Managed environment-variable file.
+- Java, Python, Node.js and Git detection.
+- Installation plans and verification.
+- Backups for changed configuration files.
+
+Acceptance criteria:
+
+- The user sees the proposed changes before approval.
+- Existing configuration is preserved.
+- Installation results are verified.
 
 ### Phase 5 --- Fresh setup and provisioning
 
-Deliverables: - Web research tool for current installation guidance and
-source comparison. - Installation option comparison and source
-citations. - Provisioning planner and reusable installation profiles. -
-Development workstation profile for Java, Python, Node.js, Git and
-Docker. - Service verification and setup reports. - Idempotent behavior
-and safe handling of pre-existing installations.
+Deliverables:
 
-Acceptance criteria: - The agent detects existing packages, services,
-ports, configuration and data before changes. - It researches current
-installation choices and cites authoritative sources. - It presents
-package sources, versions, ports and configuration changes. -
-Installation and service changes require local approval. - Existing
-database data and configuration are never silently overwritten.
+- Web research tool for current installation guidance and source
+  comparison.
+- Installation option comparison and source citations.
+- Provisioning planner and reusable installation profiles.
+- Development workstation profile for Java, Python, Node.js, Git and
+  Docker.
+- Service verification and setup reports.
+- Idempotent behavior and safe handling of pre-existing installations.
+
+Acceptance criteria:
+
+- The agent detects existing packages, services, ports, configuration
+  and data before changes.
+- It researches current installation choices and cites authoritative
+  sources.
+- It presents package sources, versions, ports and configuration
+  changes.
+- Installation and service changes require local approval.
+- Existing database data and configuration are never silently
+  overwritten.
 
 ### Phase 6 --- Docker and project initialization
 
-Deliverables: - Docker inspection and safe cleanup. - Project
-templates. - Workspace restrictions. - Explicit overwrite protection.
+Deliverables:
 
-Acceptance criteria: - Routine cleanup never prunes volumes. - Project
-generation does not overwrite existing files. - Every modifying action
-is recorded.
+- Docker inspection and safe cleanup.
+- Project templates.
+- Workspace restrictions.
+- Explicit overwrite protection.
+
+Acceptance criteria:
+
+- Routine cleanup never prunes volumes.
+- Project generation does not overwrite existing files.
+- Every modifying action is recorded.
 
 ### Phase 7 --- Troubleshooting and reports
 
-Deliverables: - Docker, network, Java, Python, Node and database
-troubleshooting profiles. - Markdown and JSON report output. -
-Evidence-based recommendations.
+Deliverables:
 
-Acceptance criteria: - Reports distinguish facts from hypotheses. -
-Fixes require approval. - Verification is performed after approved
-changes.
+- Docker, network, Java, Python, Node and database troubleshooting
+  profiles.
+- Markdown and JSON report output.
+- Evidence-based recommendations.
+
+Acceptance criteria:
+
+- Reports distinguish facts from hypotheses.
+- Fixes require approval.
+- Verification is performed after approved changes.
 
 ### Phase 8 --- Future enhancement: add a local web UI
 
-Deliverables: - Local FastAPI service. - Browser UI. - Reuse of the same
-agent, tools and policies.
+Deliverables:
 
-Acceptance criteria: - Local-only binding by default. - No gateway
-secret in the frontend. - State-changing actions retain the same
-approval rules.
+- Local FastAPI service.
+- Browser UI.
+- Reuse of the same agent, tools and policies.
+
+Acceptance criteria:
+
+- Local-only binding by default.
+- No gateway secret in the frontend.
+- State-changing actions retain the same approval rules.
 
 ------------------------------------------------------------------------
 
@@ -2109,9 +2083,9 @@ uncontrolled system change.
 
 ------------------------------------------------------------------------
 
-## 17. CLI Interface Plan (Version 1)
+## 19. CLI Interface Plan (Version 1)
 
-### 17.1 Interface goals
+### 19.1 Interface goals
 
 Version 1 will use an interactive terminal interface. The CLI is the
 primary user-facing layer; it must not contain the agent's core
@@ -2138,7 +2112,7 @@ indicators, and prompts. Keep presentation code separate from the
 agent's service layer so a future local web interface can reuse the same
 agent functionality.
 
-### 17.2 Startup screen and host summary
+### 19.2 Startup screen and host summary
 
 Example startup experience:
 
@@ -2169,7 +2143,7 @@ distribution name alone.
 Avoid displaying sensitive host details or a long inventory by default.
 Provide a separate inspect command for users who want more detail.
 
-### 17.3 Investigation, plan, and approval experience
+### 19.3 Investigation, plan, and approval experience
 
 Example interaction for an existing-system troubleshooting task:
 
@@ -2235,7 +2209,7 @@ Starting a service and enabling it at boot are separate changes. The
 agent must not bundle them without explaining the persistent effect and
 obtaining approval for both.
 
-### 17.4 Task progress and final result
+### 19.4 Task progress and final result
 
 During execution, show concise progress without exposing secrets or
 unbounded command output.
@@ -2285,25 +2259,25 @@ Never display `PASSED` merely because the modifying command returned
 exit code zero. The verification engine must establish the expected end
 state.
 
-### 17.5 Interactive commands
+### 19.5 Interactive commands
 
 The initial CLI may support these built-in commands:
 
-  Command      Purpose
-  ------------ ---------------------------------------------------
-  `/help`      Show available interaction commands
-  `/inspect`   Display detected host and capability information
-  `/plan`      Show or regenerate the current task plan
-  `/dry-run`   Show intended operations without applying changes
-  `/history`   List recent task summaries
-  `/report`    Display the current task report
-  `/cancel`    Cancel the current task when safe
-  `/exit`      Exit the interactive session
+| Command | Purpose |
+| --- | --- |
+| `/help` | Show available interaction commands |
+| `/inspect` | Display detected host and capability information |
+| `/plan` | Show or regenerate the current task plan |
+| `/dry-run` | Show intended operations without applying changes |
+| `/history` | List recent task summaries |
+| `/report` | Display the current task report |
+| `/cancel` | Cancel the current task when safe |
+| `/exit` | Exit the interactive session |
 
 These commands control the CLI session; they are not substitutes for the
 typed tools used by the agent to interact with Linux.
 
-### 17.6 Non-interactive CLI entry points
+### 19.6 Non-interactive CLI entry points
 
 Provide a small initial command-line interface for scripting and
 diagnostics:
@@ -2329,7 +2303,7 @@ available, stop and report that approval is required. Do not add an
 unsafe `--yes` or `--force` option that silently bypasses the policy
 engine.
 
-### 17.7 CLI presentation rules
+### 19.7 CLI presentation rules
 
 -   Use color as an enhancement, not as the only way to communicate
     status. Provide readable labels for color-blind users and plain
@@ -2349,7 +2323,7 @@ engine.
 -   Do not claim that an operation was rolled back unless recovery was
     actually performed and independently verified.
 
-### 17.8 CLI implementation boundary
+### 19.8 CLI implementation boundary
 
 The CLI should call application services rather than implement agent
 logic itself.
