@@ -168,3 +168,38 @@ def test_keyboard_interrupt_exits_cleanly(
 
     monkeypatch.setattr(app, "run", boom)
     assert app.main([]) == app.EXIT_INTERRUPTED
+
+
+def test_check_gateway_flag_exit_codes(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from agent.llm_client import CheckResult
+
+    monkeypatch.chdir(tmp_path)
+    for k, v in good_env().items():
+        monkeypatch.setenv(k, v)
+
+    monkeypatch.setattr(app, "check_gateway", lambda c: [CheckResult("a", True, "")])
+    assert app.main(["--check-gateway"]) == app.EXIT_OK
+    monkeypatch.setattr(app, "check_gateway", lambda c: [CheckResult("a", False, "x")])
+    assert app.main(["--check-gateway"]) == app.EXIT_GATEWAY_ERROR
+
+
+def test_gateway_error_exits_cleanly(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from agent.llm_client import LLMAuthError
+
+    monkeypatch.chdir(tmp_path)
+    for k, v in good_env().items():
+        monkeypatch.setenv(k, v)
+
+    def boom(_: object) -> list[object]:
+        raise LLMAuthError("Gateway rejected the credentials (401)", 401)
+
+    monkeypatch.setattr(app, "check_gateway", boom)
+    assert app.main(["--check-gateway"]) == app.EXIT_GATEWAY_ERROR
+    err = capsys.readouterr().err
+    assert "gateway error" in err and "Traceback" not in err and SECRET not in err
