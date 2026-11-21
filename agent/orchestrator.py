@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from agent.approval import ApprovalService, render_plan
 from agent.command_plan import parse_plan
 from agent.llm_client import (
     EXECUTE_COMMAND_PLAN,
@@ -25,6 +26,7 @@ from agent.llm_client import (
     LLMError,
     ToolCall,
 )
+from agent.planner import ActionPlan, build_action_plan
 from agent.prompts import SYSTEM_PROMPT, host_context_message
 from agent.redaction import redact
 from agent.registry import ToolRegistry
@@ -91,8 +93,15 @@ class Orchestrator:
         listener: Listener | None = None,
         clock: Callable[[], float] = time.monotonic,
         secrets: list[str] | None = None,
+        approvals: ApprovalService | None = None,
+        modifications_enabled: bool = False,
     ) -> None:
         self.client = client
+        # Without an approval service every changing plan is refused.
+        self.approvals = approvals
+        # Build 8 can present and approve plans but has no executor for
+        # changes; Build 9 switches this on.
+        self.modifications_enabled = modifications_enabled
         self.registry = registry
         self.runner = runner
         self.limits = limits or Limits(max_tool_rounds=client.max_tool_rounds)
@@ -246,6 +255,14 @@ class Orchestrator:
                 "details": errors,
             }
 
+        action = build_action_plan(
+            plan,
+            self.runner.preview_steps(plan, gate=False),
+            str(self.runner.default_cwd),
+        )
+        if action.is_modifying or action.blocked:
+            return self._handle_changing_plan(call, action, events)
+
         self._listen("plan", {"preview": self.runner.preview(plan), "mode": plan.mode})
         result = self.runner.run_plan(plan, cancel)
         for step in result.results:
@@ -264,6 +281,65 @@ class Orchestrator:
             )
         )
         return result.to_model_dict()
+
+    def _handle_changing_plan(
+        self, call: ToolCall, action: ActionPlan, events: list[ToolEvent]
+    ) -> dict[str, Any]:
+        """Present a plan that is blocked or changes the system.
+
+        Blocked plans are refused without asking. Changing plans are shown to
+        the local user; the model is told the outcome. In this build nothing
+        that changes the system runs, approved or not.
+        """
+        rendered = render_plan(action)
+        self._listen(
+            "approval_plan",
+            {"preview": rendered, "requirement": action.requirement.value},
+        )
+
+        def refuse(status: str, message: str) -> dict[str, Any]:
+            events.append(ToolEvent(call.name, False, status, arguments=call.arguments))
+            self._listen("approval_result", {"status": status})
+            return {
+                "executed": False,
+                "status": status,
+                "requirement": action.requirement.value,
+                "message": message,
+                "steps": [
+                    {
+                        "step_id": s.step_id,
+                        "command": s.command,
+                        "risk": s.decision.risk.value,
+                        "requirement": s.decision.requirement.value,
+                        "reason": s.blocked_reason or s.decision.reason,
+                    }
+                    for s in action.steps
+                ],
+            }
+
+        if action.blocked:
+            return refuse("blocked", "This plan contains steps that are never run.")
+        if action.errors:
+            return refuse("invalid", " ".join(action.errors))
+        if self.approvals is None:
+            return refuse(
+                "approval_unavailable",
+                "Changes need local approval, and no approval channel is available.",
+            )
+        approval = self.approvals.request(action, rendered)
+        if approval is None:
+            return refuse(
+                "rejected",
+                "The user did not approve this plan. Do not retry it unchanged; "
+                "ask the user what they want instead.",
+            )
+        if not self.modifications_enabled:
+            return refuse(
+                "approved_not_executed",
+                "The user approved, but this version cannot run changes yet. "
+                "Nothing was changed. Tell the user the exact commands instead.",
+            )
+        return refuse("not_executed", "No executor for changes is configured.")
 
     def _append_tool_result(self, call: ToolCall, payload: dict[str, Any]) -> None:
         text = redact(json.dumps(payload, default=str), self._secrets)

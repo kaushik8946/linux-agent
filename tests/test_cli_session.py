@@ -122,7 +122,9 @@ def test_blocked_command_is_shown(tmp_path: Path) -> None:
         completion("I can't do that in read-only mode."),
     )
     session.run()
-    assert "BLOCKED" in out.getvalue() and "blocked rm -rf x" in out.getvalue()
+    text = out.getvalue()
+    assert "rm -rf x" in text and "DESTRUCTIVE" in text
+    assert "Plan needs review" in text and "(invalid)" in text
 
 
 def test_report_saved_after_request(tmp_path: Path) -> None:
@@ -192,7 +194,7 @@ def test_ctrl_c_during_request_cancels_without_corrupting_state(tmp_path: Path) 
         tmp_path,
         ["slow", "/report", "/exit"],
         completion(
-            None, [tool_call(EXECUTE_COMMAND_PLAN, plan(("a", "sleep", ["30"])))]
+            None, [tool_call(EXECUTE_COMMAND_PLAN, plan(("a", "uname", ["-a"])))]
         ),
     )
     orch = session.orchestrator

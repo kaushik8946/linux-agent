@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from dotenv import find_dotenv, load_dotenv
 from rich.console import Console
 
+from agent.approval import ApprovalService
 from agent.command_plan import parse_plan
 from agent.llm_client import LLMClient, LLMError, check_gateway
 from agent.orchestrator import Orchestrator
@@ -124,6 +125,7 @@ def build_session(config: Config) -> Session:
         build_registry(profile, runner),
         runner,
         secrets=[config.api_key],
+        approvals=ApprovalService(input),
     )
     return Session(
         orchestrator=orchestrator,

@@ -30,7 +30,8 @@ Describe what you want to know in plain language, for example:
   Check why my laptop is running slowly.
   Is anything listening on network ports?
 
-The model chooses read-only commands; the local policy decides what may run.
+The model chooses commands. Read-only ones run automatically; anything that
+changes the system is shown to you first and needs your approval.
 
 Commands:
   /help      Show this help
@@ -71,7 +72,7 @@ class Session:
         )
         self.console.print(self._host_line())
         self.console.print(
-            "Type a request, or /help. Read-only mode: nothing is changed.\n"
+            "Type a request, or /help. Changes are shown for your approval first.\n"
         )
         while True:
             try:
@@ -152,9 +153,26 @@ class Session:
 
     # ------------------------------------------------------------------
 
+    def approval_prompt(self, status: Any) -> Callable[[str], str]:
+        """Ask the local user. The spinner is stopped while waiting for input."""
+
+        def ask(question: str) -> str:
+            status.stop()
+            try:
+                # The question was already rendered by the approval_plan event;
+                # show only its final line, which is the actual prompt.
+                return self.read(question.splitlines()[-1] + " ")
+            finally:
+                status.start()
+
+        return ask
+
     def handle_request(self, request: str) -> TurnResult | None:
         cancel = threading.Event()
         status = self.console.status("Thinking...", spinner="dots")
+        approvals = self.orchestrator.approvals
+        if approvals is not None:
+            approvals.set_prompt(self.approval_prompt(status))
         self.orchestrator.set_listener(self._listener(status))
         try:
             with status:
@@ -185,6 +203,26 @@ class Session:
                 for line in preview.splitlines():
                     self.console.print(f"  {escape(line)}", highlight=False)
                 status.update("Running commands...")
+            elif event == "approval_plan":
+                self.console.print(
+                    f"[bold yellow]Plan needs review[/bold yellow] "
+                    f"[dim](requires: {escape(str(data.get('requirement')))})[/dim]"
+                )
+                for line in self._safe(str(data.get("preview", ""))).splitlines():
+                    self.console.print(f"  {escape(line)}", highlight=False)
+            elif event == "approval_result":
+                status_text = str(data.get("status"))
+                label = {
+                    "blocked": "[red]Blocked by policy; not run.[/red]",
+                    "rejected": "[yellow]Not approved; nothing was changed.[/yellow]",
+                    "approved_not_executed": (
+                        "[yellow]Approved, but this version cannot run changes "
+                        "yet; nothing was changed.[/yellow]"
+                    ),
+                    "approval_unavailable": "[yellow]No approval channel; not run.[/yellow]",
+                    "invalid": "[red]Plan is incomplete; not run.[/red]",
+                }.get(status_text, f"[yellow]{escape(status_text)}[/yellow]")
+                self.console.print(f"  {label} [dim]({escape(status_text)})[/dim]")
             elif event == "step":
                 colour = {"ok": "green", "blocked": "red", "skipped": "dim"}.get(
                     str(data.get("status")), "yellow"

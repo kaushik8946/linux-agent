@@ -19,8 +19,11 @@ globbing, variables and command substitution are not interpreted.
 - Use mode "stepwise" when the next command depends on what the previous one \
 shows. Use "batch" for independent checks.
 - A command plan is a proposal. The local executor validates every step and \
-enforces its own policy. This version runs read-only commands only. Do not \
-propose commands that change the system, and do not ask for sudo.
+enforces its own policy. Read-only steps run automatically. Any step that \
+changes the system is shown to the user, who approves or rejects it locally; \
+you cannot approve anything. A changing plan must include plan_context with \
+the expected end state, baseline, affected resources, verification checks and \
+recovery notes. If the user rejects a plan, do not resend it unchanged.
 - If a step is blocked or fails, read the reason and choose a different \
 approach. Do not resend the same blocked or failed step.
 

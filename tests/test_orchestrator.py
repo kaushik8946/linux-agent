@@ -69,7 +69,8 @@ def test_system_prompt_states_the_safety_rules(tmp_path: Path) -> None:
         m["content"] for m in sdk.requests[0]["messages"] if m["role"] == "system"
     )
     for phrase in ("untrusted evidence", "unknown", "observations", "hypotheses",
-                   "Never claim", "read-only"):  # fmt: skip
+                   "Never claim", "Read-only steps run automatically",
+                   "cannot approve anything", "plan_context"):  # fmt: skip
         assert phrase in system
 
 
@@ -177,18 +178,23 @@ def test_stepwise_plan_reports_pending_steps_to_the_model(tmp_path: Path) -> Non
 
 
 @pytest.mark.parametrize(
-    ("args", "expect"),
+    ("args", "expect", "status"),
     [
-        (plan_args(("a", "bash", ["-c", "id"])), "UNSUPPORTED"),
-        (plan_args(("a", "rm", ["-rf", "x"])), "DESTRUCTIVE"),
-        (plan_args(("a", "sudo", ["ls"])), "PRIVILEGED"),
-        (plan_args(("a", "cat", ["/etc/shadow"])), "SENSITIVE"),
-        (plan_args(("a", "echo", ["ok"]), ("b", "touch", ["x"])), "USER_LEVEL_CHANGE"),
+        (plan_args(("a", "bash", ["-c", "id"])), "UNSUPPORTED", "blocked"),
+        (plan_args(("a", "cat", ["/etc/shadow"])), "SENSITIVE", "blocked"),
+        (plan_args(("a", "rm", ["-rf", "x"])), "DESTRUCTIVE", "approval_unavailable"),
+        (plan_args(("a", "sudo", ["ls"])), "PRIVILEGED", "approval_unavailable"),
+        (
+            plan_args(("a", "echo", ["ok"]), ("b", "touch", ["x"])),
+            "USER_LEVEL_CHANGE",
+            "approval_unavailable",
+        ),
     ],
 )
 def test_policy_blocked_plans_are_rejected(
-    tmp_path: Path, args: dict[str, Any], expect: str
+    tmp_path: Path, args: dict[str, Any], expect: str, status: str
 ) -> None:
+    args.setdefault("plan_context", {"expected_end_state": "x exists"})
     orch, sdk = make(
         tmp_path,
         completion(None, [tool_call(EXECUTE_COMMAND_PLAN, args)]),
@@ -197,7 +203,8 @@ def test_policy_blocked_plans_are_rejected(
     result = orch.ask("x")
     payload = last_tool_payload(sdk)
     assert payload["executed"] is False
-    assert expect in {r.get("risk") for r in payload["results"]}
+    assert payload["status"] == status
+    assert expect in {r.get("risk") for r in payload["steps"]}
     assert not result.events[0].ok
     assert not (tmp_path / "x").exists()
 

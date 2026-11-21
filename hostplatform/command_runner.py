@@ -314,13 +314,13 @@ class CommandRunner:
                 env[name] = self._environ[name]
         return env
 
-    def _prepare(self, step: Step) -> _Prepared:
+    def _prepare(self, step: Step, gate: bool = True) -> _Prepared:
         executable = self.resolve_executable(step.executable)
         name = executable.name
         classification = self._policy(name, step.args)
         argv = [str(executable), *step.args]
         preview = redact(shlex.join([name, *step.args]), self._secrets)
-        if classification.risk not in self._allowed_risks:
+        if gate and classification.risk not in self._allowed_risks:
             raise _BlockedStep(preview, classification)
         timeout = float(step.timeout_seconds or self.limits.default_timeout)
         out = step.max_output_bytes or self.limits.default_output_bytes
@@ -335,9 +335,9 @@ class CommandRunner:
             output_bytes=min(out, self.limits.max_output_bytes),
         )
 
-    def _safe_prepare(self, step: Step) -> _Prepared | StepResult:
+    def _safe_prepare(self, step: Step, gate: bool = True) -> _Prepared | StepResult:
         try:
-            return self._prepare(step)
+            return self._prepare(step, gate)
         except _BlockedStep as blocked:
             c = blocked.classification
             return StepResult(
@@ -355,11 +355,16 @@ class CommandRunner:
                 reason=f"rejected: {rejected}",
             )
 
-    def preview_steps(self, plan: CommandPlan) -> list[StepPreview]:
-        """Structured preview of a plan. Starts nothing."""
+    def preview_steps(self, plan: CommandPlan, gate: bool = True) -> list[StepPreview]:
+        """Structured preview of a plan. Starts nothing.
+
+        With ``gate=False`` the runner's allowed risk classes are not applied,
+        so each step shows its true classification. Resolution, path and
+        environment rejections still apply. Used to build approval plans.
+        """
         previews: list[StepPreview] = []
         for step in plan.steps:
-            prepared = self._safe_prepare(step)
+            prepared = self._safe_prepare(step, gate)
             if isinstance(prepared, StepResult):
                 previews.append(
                     StepPreview(

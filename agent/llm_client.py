@@ -170,6 +170,28 @@ EXECUTE_COMMAND_PLAN_TOOL: dict[str, Any] = {
                         "additionalProperties": False,
                     },
                 },
+                "plan_context": {
+                    "type": "object",
+                    "description": (
+                        "Required when any step changes the system. Shown to "
+                        "the user, who decides locally whether to approve."
+                    ),
+                    "properties": {
+                        "expected_end_state": {"type": "string"},
+                        "baseline": {"type": "string"},
+                        "affected_resources": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                        "verification": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                        "recovery": {"type": "string"},
+                    },
+                    "required": ["expected_end_state"],
+                    "additionalProperties": False,
+                },
             },
             "required": ["steps"],
             "additionalProperties": False,

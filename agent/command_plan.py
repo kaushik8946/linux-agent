@@ -62,6 +62,22 @@ class Step(BaseModel):
         return self
 
 
+class PlanContext(BaseModel):
+    """Model-supplied description of what a changing plan is for.
+
+    Descriptive text for the user's review only. Nothing here is trusted for
+    authorization, and there is deliberately no approval field.
+    """
+
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+    expected_end_state: str = Field(min_length=1, max_length=500)
+    baseline: str = Field(default="", max_length=500)
+    affected_resources: list[str] = Field(default_factory=list, max_length=20)
+    verification: list[str] = Field(default_factory=list, max_length=20)
+    recovery: str = Field(default="", max_length=500)
+
+
 class CommandPlan(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
@@ -71,6 +87,8 @@ class CommandPlan(BaseModel):
     # remaining step IDs as pending. The model must send them in a later call
     # after reviewing the result, so it adapts between steps.
     mode: Literal["batch", "stepwise"] = "batch"
+    # Required (checked by the planner) when any step changes the system.
+    plan_context: PlanContext | None = None
 
     @model_validator(mode="after")
     def _check(self) -> CommandPlan:
