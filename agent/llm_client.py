@@ -73,7 +73,7 @@ GET_AGENT_STATUS_TOOL: dict[str, Any] = {
         "name": GET_AGENT_STATUS,
         "description": (
             "Return static metadata about this agent: name, version and which "
-            "capabilities are enabled. Read-only and harmless."
+            "capabilities are enabled. Harmless."
         ),
         "parameters": {
             "type": "object",
@@ -93,7 +93,10 @@ EXECUTE_COMMAND_PLAN_TOOL: dict[str, Any] = {
         "name": EXECUTE_COMMAND_PLAN,
         "description": (
             "Propose an ordered list of Linux commands to gather evidence or "
-            "achieve the user's outcome. Each step is an executable name plus "
+            "to change the system and achieve the user's outcome (install, "
+            "configure, start, create). Read-only steps run at once; any "
+            "step that changes the system runs after the user approves it. "
+            "Each step is an executable name plus "
             "a separate argument array. No shell syntax is supported: pipes, "
             "redirection, globbing, substitution and expansion are NOT "
             "interpreted. The local application validates and runs the steps "
@@ -315,7 +318,7 @@ def agent_status() -> dict[str, Any]:
         "version": get_version(),
         "interface": "cli",
         "command_execution_enabled": False,
-        "note": "Read-only proof-of-concept build; no commands are executed.",
+        "note": "Default dispatcher only; real sessions run commands through the executor.",
     }
 
 
