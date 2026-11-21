@@ -21,6 +21,7 @@ from tools.docker_ops import register_docker_operations
 from tools.envvars import register_env_tools
 from tools.network import register_network_tools
 from tools.packages import register_package_tools, register_service_tools
+from tools.research import register_research_tools
 from tools.workspace import register_workspace_tools
 
 
@@ -44,12 +45,16 @@ def register_host_adapters(
         register_docker_tools(registry, docker)
         register_docker_operations(registry, docker)
         enabled.append("docker")
+    packages: AptAdapter | None = None
     if "apt-get" in host.package_managers:
         apt = AptAdapter(shutil.which, is_root)
         if apt.available():
+            packages = apt
             register_package_tools(registry, apt)
             register_dev_tools(registry, apt)
             enabled.append("apt")
+    register_research_tools(registry, packages)
+    enabled.append("research")
     sm = host.service_manager
     if sm.name == "systemd" and sm.state == "running":
         systemd = SystemdAdapter(shutil.which, is_root, running=True)
