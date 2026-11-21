@@ -3,20 +3,24 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Sequence
 
 from dotenv import find_dotenv, load_dotenv
 
+from agent.command_plan import parse_plan
 from agent.llm_client import LLMClient, LLMError, check_gateway
 from agent.version import get_version
 from config import Config, ConfigError, load_config
 from hostplatform.capabilities import render_profile
+from hostplatform.command_runner import CommandRunner
 from hostplatform.discovery import discover
 
 EXIT_OK = 0
 EXIT_CONFIG_ERROR = 2
 EXIT_GATEWAY_ERROR = 3
+EXIT_PLAN_INVALID = 4
 EXIT_INTERRUPTED = 130
 
 
@@ -39,6 +43,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="show detected host facts and capabilities, then exit",
     )
     parser.add_argument(
+        "--preview-plan",
+        metavar="FILE",
+        help=(
+            "validate a command plan from a JSON file ('-' for stdin) and show "
+            "what would run and how each step is classified, without running it"
+        ),
+    )
+    parser.add_argument(
         "--check-gateway",
         action="store_true",
         help=(
@@ -52,6 +64,39 @@ def build_parser() -> argparse.ArgumentParser:
 def _load_environment() -> None:
     # Existing environment variables take precedence over the .env file.
     load_dotenv(find_dotenv(usecwd=True), override=False)
+
+
+def preview_plan_command(source: str) -> int:
+    """Show a plan's validation result and classification. Runs nothing."""
+    try:
+        if source == "-":
+            text = sys.stdin.read()
+        else:
+            with open(source, encoding="utf-8") as handle:
+                text = handle.read()
+        data = json.loads(text)
+    except (OSError, UnicodeDecodeError) as exc:
+        print(f"linux-agent: cannot read plan: {type(exc).__name__}", file=sys.stderr)
+        return EXIT_PLAN_INVALID
+    except ValueError:
+        print("linux-agent: plan is not valid JSON", file=sys.stderr)
+        return EXIT_PLAN_INVALID
+
+    plan, errors = parse_plan(data)
+    if plan is None:
+        print("Invalid plan:", file=sys.stderr)
+        for error in errors:
+            print(f"  - {error}", file=sys.stderr)
+        return EXIT_PLAN_INVALID
+
+    runner = CommandRunner.for_host(discover())
+    print(f"Plan ({len(plan.steps)} step(s), mode: {plan.mode}); nothing is executed.")
+    print(runner.preview(plan))
+    blocked = [p for p in runner.preview_steps(plan) if p.blocked_reason]
+    if blocked:
+        print(f"\n{len(blocked)} step(s) blocked; the plan would not run.")
+        return EXIT_PLAN_INVALID
+    return EXIT_OK
 
 
 def check_gateway_command(config: Config) -> int:
@@ -76,6 +121,10 @@ def run(config: Config) -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     # --help and --version exit inside parse_args, before any config is read.
     args = build_parser().parse_args(argv)
+
+    if args.preview_plan:
+        # Previewing needs no gateway configuration and runs nothing.
+        return preview_plan_command(args.preview_plan)
 
     if args.inspect:
         # Host inspection needs no gateway configuration and makes no model call.

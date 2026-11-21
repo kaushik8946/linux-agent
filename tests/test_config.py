@@ -203,3 +203,77 @@ def test_gateway_error_exits_cleanly(
     assert app.main(["--check-gateway"]) == app.EXIT_GATEWAY_ERROR
     err = capsys.readouterr().err
     assert "gateway error" in err and "Traceback" not in err and SECRET not in err
+
+
+# -- --preview-plan -------------------------------------------------------------
+
+
+def _preview(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    data: object,
+    capsys: pytest.CaptureFixture[str],
+) -> tuple[int, str, str]:
+    import json
+
+    monkeypatch.chdir(tmp_path)
+    for name in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL"):
+        monkeypatch.delenv(name, raising=False)
+    f = tmp_path / "plan.json"
+    f.write_text(data if isinstance(data, str) else json.dumps(data))
+    code = app.main(["--preview-plan", str(f)])
+    cap = capsys.readouterr()
+    return code, cap.out, cap.err
+
+
+def test_preview_plan_shows_classification_without_running(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import subprocess
+
+    def forbidden(*a: object, **k: object) -> None:
+        raise AssertionError("preview must not start a process")
+
+    monkeypatch.setattr(subprocess, "Popen", forbidden)
+    plan = {
+        "steps": [{"id": "a", "purpose": "os", "executable": "uname", "args": ["-a"]}]
+    }
+    code, out, _ = _preview(monkeypatch, tmp_path, plan, capsys)
+    assert code == app.EXIT_OK
+    assert "[READ_ONLY] uname -a" in out and "nothing is executed" in out
+
+
+def test_preview_plan_reports_blocked_steps(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    plan = {
+        "steps": [
+            {"id": "a", "purpose": "x", "executable": "bash", "args": ["-c", "id"]}
+        ]
+    }
+    code, out, _ = _preview(monkeypatch, tmp_path, plan, capsys)
+    assert code == app.EXIT_PLAN_INVALID
+    assert "BLOCKED" in out and "would not run" in out
+
+
+@pytest.mark.parametrize("bad", ["{not json", '{"steps": 5}', '{"steps": []}'])
+def test_preview_plan_rejects_invalid_input(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    bad: str,
+) -> None:
+    code, _, err = _preview(monkeypatch, tmp_path, bad, capsys)
+    assert code == app.EXIT_PLAN_INVALID
+    assert "Traceback" not in err
+
+
+def test_preview_plan_missing_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert (
+        app.main(["--preview-plan", str(tmp_path / "nope.json")])
+        == app.EXIT_PLAN_INVALID
+    )
+    assert "Traceback" not in capsys.readouterr().err

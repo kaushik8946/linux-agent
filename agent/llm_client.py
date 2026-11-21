@@ -84,8 +84,9 @@ GET_AGENT_STATUS_TOOL: dict[str, Any] = {
     },
 }
 
-# Provisional schema. Build 4 validates plans against the real model and may
-# tighten it. In Build 2 a proposed plan is parsed but never executed.
+# Mirrors agent.command_plan.CommandPlan, which is the authoritative validator.
+# The default dispatcher below never executes plans; agent.plan_dispatch
+# connects them to the controlled executor.
 EXECUTE_COMMAND_PLAN_TOOL: dict[str, Any] = {
     "type": "function",
     "function": {
@@ -101,6 +102,16 @@ EXECUTE_COMMAND_PLAN_TOOL: dict[str, Any] = {
         "parameters": {
             "type": "object",
             "properties": {
+                "mode": {
+                    "type": "string",
+                    "enum": ["batch", "stepwise"],
+                    "description": (
+                        "batch (default) runs every step and returns all "
+                        "results. stepwise runs only the first step and "
+                        "returns its result, so you can choose the next "
+                        "command from what you observed."
+                    ),
+                },
                 "steps": {
                     "type": "array",
                     "minItems": 1,
@@ -134,6 +145,7 @@ EXECUTE_COMMAND_PLAN_TOOL: dict[str, Any] = {
                             "max_output_bytes": {
                                 "type": "integer",
                                 "minimum": 1,
+                                "maximum": 262144,
                             },
                             "env_allowlist": {
                                 "type": "array",
@@ -157,7 +169,7 @@ EXECUTE_COMMAND_PLAN_TOOL: dict[str, Any] = {
                         "required": ["id", "purpose", "executable", "args"],
                         "additionalProperties": False,
                     },
-                }
+                },
             },
             "required": ["steps"],
             "additionalProperties": False,
