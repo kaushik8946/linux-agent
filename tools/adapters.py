@@ -23,6 +23,7 @@ from tools.docker_ops import register_docker_operations
 from tools.envvars import register_env_tools
 from tools.network import register_network_tools
 from tools.packages import register_package_tools, register_service_tools
+from tools.provisioning import register_provisioning_tools
 from tools.research import register_research_tools
 from tools.workspace import register_workspace_tools
 
@@ -69,4 +70,6 @@ def register_host_adapters(
         if systemd.available():
             register_service_tools(registry, systemd)
             enabled.append("systemd")
+    register_provisioning_tools(registry)
+    enabled.append("provisioning")
     return enabled
