@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "linux-agent"
 version = "0.1.0"
@@ -15,8 +19,16 @@ dev = ["pytest", "ruff", "mypy"]
 [project.scripts]
 linux-agent = "cli.app:main"
 
+[tool.setuptools]
+py-modules = ["config", "main"]
+
+[tool.setuptools.packages.find]
+include = ["agent*", "cli*", "tools*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 88
+extend-exclude = ["docs"]
