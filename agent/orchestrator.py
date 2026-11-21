@@ -116,6 +116,9 @@ class Orchestrator:
                 {"role": "system", "content": host_context_message(self.host_summary)}
             )
 
+    def set_listener(self, listener: Listener | None) -> None:
+        self._listen = listener or (lambda _event, _data: None)
+
     @property
     def tools(self) -> list[dict[str, Any]]:
         return [*self.registry.openai_tools(), EXECUTE_COMMAND_PLAN_TOOL]
@@ -142,62 +145,70 @@ class Orchestrator:
             self.turns.append(result)
             return result
 
-        while True:
-            if cancel.is_set():
-                self._close_open_calls()
-                return finish(StopReason.CANCELLED, "Request cancelled.")
-            if self._clock() - started >= self.limits.max_seconds:
-                self._close_open_calls()
-                return finish(StopReason.TIME_LIMIT, self._limit_text("time limit"))
-            if rounds >= self.limits.max_tool_rounds:
-                self._close_open_calls()
-                return finish(
-                    StopReason.TOOL_ROUNDS, self._limit_text("tool-round limit")
-                )
-
-            rounds += 1
-            self._listen("thinking", {"round": rounds})
-            try:
-                response = self.client.chat(self.messages, self.tools)
-            except LLMError as exc:
-                # Drop this request from history so a retry starts cleanly.
-                del self.messages[checkpoint:]
-                return finish(StopReason.GATEWAY_ERROR, "", str(exc))
-
-            self.messages.append(response.assistant_message)
-            if not response.tool_calls:
-                return finish(StopReason.ANSWERED, response.content or "")
-
-            over_limit = False
-            for call in response.tool_calls:
-                if call.name == EXECUTE_COMMAND_PLAN:
-                    if command_rounds >= self.limits.max_command_rounds:
-                        over_limit = True
-                        payload: dict[str, Any] = {
-                            "executed": False,
-                            "error": (
-                                "command-round limit reached; no more commands "
-                                "will run. Answer from the evidence you have."
-                            ),
-                        }
-                        events.append(
-                            ToolEvent(call.name, False, "command-round limit reached")
-                        )
-                    else:
-                        command_rounds += 1
-                        payload = self._run_plan(call, events, cancel)
-                else:
-                    payload = self._run_tool(call, events)
-                self._append_tool_result(call, payload)
-
-            if over_limit:
-                if limit_notified:
-                    # Told once already and still asking for commands: stop.
+        try:
+            while True:
+                if cancel.is_set():
+                    self._close_open_calls()
+                    return finish(StopReason.CANCELLED, "Request cancelled.")
+                if self._clock() - started >= self.limits.max_seconds:
+                    self._close_open_calls()
+                    return finish(StopReason.TIME_LIMIT, self._limit_text("time limit"))
+                if rounds >= self.limits.max_tool_rounds:
+                    self._close_open_calls()
                     return finish(
-                        StopReason.COMMAND_ROUNDS,
-                        self._limit_text("command-round limit"),
+                        StopReason.TOOL_ROUNDS, self._limit_text("tool-round limit")
                     )
-                limit_notified = True
+
+                rounds += 1
+                self._listen("thinking", {"round": rounds})
+                try:
+                    response = self.client.chat(self.messages, self.tools)
+                except LLMError as exc:
+                    # Drop this request from history so a retry starts cleanly.
+                    del self.messages[checkpoint:]
+                    return finish(StopReason.GATEWAY_ERROR, "", str(exc))
+
+                self.messages.append(response.assistant_message)
+                if not response.tool_calls:
+                    return finish(StopReason.ANSWERED, response.content or "")
+
+                over_limit = False
+                for call in response.tool_calls:
+                    if call.name == EXECUTE_COMMAND_PLAN:
+                        if command_rounds >= self.limits.max_command_rounds:
+                            over_limit = True
+                            payload: dict[str, Any] = {
+                                "executed": False,
+                                "error": (
+                                    "command-round limit reached; no more commands "
+                                    "will run. Answer from the evidence you have."
+                                ),
+                            }
+                            events.append(
+                                ToolEvent(
+                                    call.name, False, "command-round limit reached"
+                                )
+                            )
+                        else:
+                            command_rounds += 1
+                            payload = self._run_plan(call, events, cancel)
+                    else:
+                        payload = self._run_tool(call, events)
+                    self._append_tool_result(call, payload)
+
+                if over_limit:
+                    if limit_notified:
+                        # Told once already and still asking for commands: stop.
+                        return finish(
+                            StopReason.COMMAND_ROUNDS,
+                            self._limit_text("command-round limit"),
+                        )
+                    limit_notified = True
+        except KeyboardInterrupt:
+            # Ctrl+C: stop cleanly. A running command was already killed by the
+            # runner; keep the history valid so the session can continue.
+            self._close_open_calls()
+            return finish(StopReason.CANCELLED, "Request cancelled.")
 
     # ------------------------------------------------------------------
 

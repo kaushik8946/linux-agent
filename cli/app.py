@@ -8,14 +8,18 @@ import sys
 from collections.abc import Sequence
 
 from dotenv import find_dotenv, load_dotenv
+from rich.console import Console
 
 from agent.command_plan import parse_plan
 from agent.llm_client import LLMClient, LLMError, check_gateway
+from agent.orchestrator import Orchestrator
 from agent.version import get_version
+from cli.session import Session
 from config import Config, ConfigError, load_config
 from hostplatform.capabilities import render_profile
 from hostplatform.command_runner import CommandRunner
 from hostplatform.discovery import discover
+from tools.system import build_registry
 
 EXIT_OK = 0
 EXIT_CONFIG_ERROR = 2
@@ -112,10 +116,27 @@ def check_gateway_command(config: Config) -> int:
     return EXIT_GATEWAY_ERROR if failed else EXIT_OK
 
 
+def build_session(config: Config) -> Session:
+    profile = discover()
+    runner = CommandRunner.for_host(profile, extra_secrets=[config.api_key])
+    orchestrator = Orchestrator(
+        LLMClient.from_config(config),
+        build_registry(profile, runner),
+        runner,
+        secrets=[config.api_key],
+    )
+    return Session(
+        orchestrator=orchestrator,
+        config=config,
+        profile=profile,
+        console=Console(),
+        secrets=[config.api_key],
+    )
+
+
 def run(config: Config) -> int:
-    """Application body. The interactive loop arrives in a later build."""
-    print(f"linux-agent {get_version()} ready (model: {config.model}).")
-    return EXIT_OK
+    """Start the interactive session."""
+    return build_session(config).run()
 
 
 def main(argv: Sequence[str] | None = None) -> int:

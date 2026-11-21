@@ -148,12 +148,16 @@ def test_startup_succeeds_and_never_prints_secret(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    import io
+
     monkeypatch.chdir(tmp_path)
     for k, v in good_env().items():
         monkeypatch.setenv(k, v)
+    monkeypatch.setattr("sys.stdin", io.StringIO("/help\n/inspect\n/exit\n"))
     assert app.main([]) == app.EXIT_OK
     captured = capsys.readouterr()
     assert SECRET not in captured.out + captured.err
+    assert "Goodbye" in captured.out
 
 
 def test_keyboard_interrupt_exits_cleanly(
