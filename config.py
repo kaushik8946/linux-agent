@@ -18,6 +18,7 @@ DEFAULT_REQUEST_TIMEOUT = 60.0
 DEFAULT_MAX_TOOL_ROUNDS = 6
 DEFAULT_REPORT_DIR = "reports"
 DEFAULT_LOG_DIR = "logs"
+DEFAULT_WORKSPACE_ROOT = "~/projects"
 
 MAX_REQUEST_TIMEOUT = 600.0
 MAX_TOOL_ROUNDS_LIMIT = 50
@@ -43,6 +44,9 @@ class Config:
     max_tool_rounds: int
     report_dir: Path
     log_dir: Path
+    workspace_root: Path = field(
+        default_factory=lambda: Path("~/projects").expanduser()
+    )
 
     def ensure_log_dir(self) -> Path:
         """Create the log directory (private). Call only when logging."""
@@ -64,6 +68,7 @@ class Config:
             "max_tool_rounds": self.max_tool_rounds,
             "report_dir": str(self.report_dir),
             "log_dir": str(self.log_dir),
+            "workspace_root": str(self.workspace_root),
         }
 
 
@@ -158,6 +163,9 @@ def load_config(
         env, "AGENT_REPORT_DIR", DEFAULT_REPORT_DIR, base_dir, problems
     )
     log_dir = _resolve_dir(env, "AGENT_LOG_DIR", DEFAULT_LOG_DIR, base_dir, problems)
+    workspace_root = _resolve_dir(
+        env, "AGENT_WORKSPACE_ROOT", DEFAULT_WORKSPACE_ROOT, base_dir, problems
+    )
 
     if problems:
         raise ConfigError(problems)
@@ -170,4 +178,5 @@ def load_config(
         max_tool_rounds=rounds,
         report_dir=report_dir,
         log_dir=log_dir,
+        workspace_root=workspace_root,
     )

@@ -19,14 +19,21 @@ from tools.docker import register_docker_tools
 from tools.docker_ops import register_docker_operations
 from tools.envvars import register_env_tools
 from tools.packages import register_package_tools, register_service_tools
+from tools.workspace import register_workspace_tools
 
 
 def register_host_adapters(
-    registry: ToolRegistry, host: HostProfile, home: Path | None = None
+    registry: ToolRegistry,
+    host: HostProfile,
+    home: Path | None = None,
+    workspace_root: Path | None = None,
 ) -> list[str]:
     enabled: list[str] = []
     register_env_tools(registry, EnvStore(home or Path.home()), shutil.which("sh"))
     enabled.append("env")
+    if workspace_root is not None:
+        register_workspace_tools(registry, workspace_root)
+        enabled.append("workspace")
     is_root = bool(host.privileges.is_root)
     docker = DockerClient(shutil.which)
     if docker.available():

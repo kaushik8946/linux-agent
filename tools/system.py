@@ -208,6 +208,7 @@ def build_registry(
     runner: CommandRunner | None = None,
     root: Path = Path("/"),
     adapters: bool = False,
+    workspace_root: Path | None = None,
 ) -> ToolRegistry:
     """Register the Build 5 context tools."""
     host = profile or discover()
@@ -263,5 +264,5 @@ def build_registry(
     if adapters:
         from tools.adapters import register_host_adapters
 
-        register_host_adapters(registry, host)
+        register_host_adapters(registry, host, workspace_root=workspace_root)
     return registry
