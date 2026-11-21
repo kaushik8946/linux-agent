@@ -10,12 +10,27 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Protocol
 
-from agent.planner import ActionPlan
 from agent.policy import Requirement
+
+if TYPE_CHECKING:
+    from agent.planner import ActionPlan
 
 DEFAULT_APPROVAL_TTL = 300.0
 YES_ANSWERS = frozenset({"y", "yes"})
+
+
+class Approvable(Protocol):
+    """Anything the user can approve: a command plan or a typed operation."""
+
+    @property
+    def fingerprint(self) -> str: ...
+
+    @property
+    def requirement(self) -> Requirement: ...
+
+    def confirmation_phrase(self) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -25,7 +40,7 @@ class Approval:
     requirement: Requirement
 
     def valid_for(
-        self, plan: ActionPlan, now: float, ttl: float = DEFAULT_APPROVAL_TTL
+        self, plan: Approvable, now: float, ttl: float = DEFAULT_APPROVAL_TTL
     ) -> bool:
         return (
             self.fingerprint == plan.fingerprint
@@ -57,7 +72,7 @@ class ApprovalService:
     def set_prompt(self, ask: Ask) -> None:
         self._ask = ask
 
-    def request(self, plan: ActionPlan, rendered: str) -> Approval | None:
+    def request(self, plan: Approvable, rendered: str) -> Approval | None:
         """Show ``rendered`` and ask. Returns an Approval, or None for No."""
         requirement = plan.requirement
         if requirement is Requirement.AUTO:
@@ -81,7 +96,7 @@ class ApprovalService:
             return None
         return Approval(plan.fingerprint, self._clock(), requirement)
 
-    def is_valid(self, approval: Approval | None, plan: ActionPlan) -> bool:
+    def is_valid(self, approval: Approval | None, plan: Approvable) -> bool:
         return approval is not None and approval.valid_for(
             plan, self._clock(), self.ttl
         )

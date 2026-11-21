@@ -20,12 +20,14 @@ cancellation leaves an accurate record of partial completion.
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
 from agent.approval import Approval, ApprovalService
 from agent.command_plan import CommandPlan
 from agent.command_policy import RiskClass
+from agent.operations import Operation
 from agent.planner import ActionPlan, build_action_plan
 from agent.policy import Requirement
 from agent.task_store import JournalError, TaskJournal, excerpt, new_task_id
@@ -49,9 +51,12 @@ class ExecutionOutcome:
     message: str
     plan_result: PlanResult | None = None
     problems: list[str] = field(default_factory=list)
+    operation_result: dict[str, Any] | None = None
 
     @property
     def executed_anything(self) -> bool:
+        if self.operation_result is not None:
+            return True
         return self.plan_result is not None and any(
             r.status not in (Status.SKIPPED, Status.BLOCKED)
             for r in self.plan_result.results
@@ -230,6 +235,130 @@ class ChangeExecutor:
             "rejected": "The plan was rejected before running.",
         }
         return ExecutionOutcome(task_id, outcome, messages[outcome], plan_result=result)
+
+    def execute_operation(
+        self,
+        operation: Operation,
+        approval: Approval | None,
+        recheck: Callable[[], Operation | dict[str, Any]],
+        allow_repeat: bool = False,
+    ) -> ExecutionOutcome:
+        """Run an approved typed operation (package install, service start).
+
+        ``recheck`` prepares the operation again from the same arguments just
+        before running, so a change of state since approval is noticed.
+        """
+        task_id = new_task_id()
+        problems: list[str] = []
+        fresh = recheck()
+        if isinstance(fresh, dict):
+            problems.append(
+                str(fresh.get("error", "operation could not be prepared again"))
+            )
+        elif fresh.fingerprint != operation.fingerprint:
+            problems.append("the operation changed after it was approved")
+        elif fresh.refused:
+            problems.append(f"no longer possible: {fresh.refused}")
+        if not self.approvals.is_valid(approval, operation):
+            problems.append(
+                "approval is missing, expired or does not match this operation"
+            )
+        if operation.requirement is Requirement.BLOCKED:
+            problems.append("operation is blocked")
+
+        try:
+            self.journal.record(
+                task_id,
+                "task_started",
+                kind="operation",
+                tool=operation.tool,
+                arguments=operation.arguments,
+                fingerprint=operation.fingerprint,
+                requirement=operation.requirement.value,
+                approved=not problems,
+                commands=operation.commands,
+                baseline=operation.baseline,
+                expected_end_state=operation.expected_end_state,
+            )
+        except JournalError as exc:
+            return ExecutionOutcome(task_id, "rejected", str(exc), problems=[str(exc)])
+
+        def finish(outcome: str, **data: Any) -> None:
+            try:
+                self.journal.record(
+                    task_id,
+                    "task_finished",
+                    fingerprint=operation.fingerprint,
+                    outcome=outcome,
+                    **data,
+                )
+            except JournalError:
+                pass
+
+        if problems:
+            finish("rejected", problems=problems)
+            return ExecutionOutcome(
+                task_id,
+                "rejected",
+                "Not run: " + "; ".join(problems),
+                problems=problems,
+            )
+        if not isinstance(fresh, dict) and fresh.no_change_needed:
+            finish("no_change_needed")
+            return ExecutionOutcome(task_id, "no_change_needed", fresh.summary)
+        if (
+            not allow_repeat
+            and operation.fingerprint in self.journal.completed_fingerprints()
+        ):
+            finish("duplicate")
+            return ExecutionOutcome(
+                task_id,
+                "duplicate",
+                "This exact operation already completed earlier; it was not run again.",
+            )
+
+        with self._lock:
+            if operation.fingerprint in self._running:
+                return ExecutionOutcome(
+                    task_id, "rejected", "This operation is already running."
+                )
+            self._running.add(operation.fingerprint)
+        try:
+            self.journal.record(
+                task_id,
+                "step_planned",
+                step_id="operation",
+                commands=operation.commands,
+            )
+            try:
+                result = operation.perform()
+            except KeyboardInterrupt:
+                finish("cancelled")
+                raise
+            except Exception as exc:  # noqa: BLE001 - report, never crash
+                finish("failed", error=type(exc).__name__)
+                return ExecutionOutcome(
+                    task_id, "failed", f"operation failed: {type(exc).__name__}"
+                )
+            ok = bool(result.get("ok"))
+            self.journal.record(
+                task_id,
+                "step_finished",
+                step_id="operation",
+                status="ok" if ok else "failed",
+                result=result,
+            )
+            outcome = "completed" if ok else "failed"
+            finish(outcome)
+            message = (
+                "The operation finished. Verify its result before claiming success."
+                if ok
+                else "The operation did not achieve its expected state."
+            )
+            return ExecutionOutcome(task_id, outcome, message, operation_result=result)
+        finally:
+            with self._lock:
+                self._running.discard(operation.fingerprint)
 
     def _finish(
         self, task_id: str, plan: ActionPlan, outcome: str, **data: Any

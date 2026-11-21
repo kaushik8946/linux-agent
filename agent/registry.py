@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from agent.command_policy import RiskClass
+from agent.operations import Operation, OperationSpec
 
 Handler = Callable[[dict[str, Any]], dict[str, Any]]
 
@@ -106,27 +107,66 @@ class ToolSpec:
 class ToolRegistry:
     def __init__(self) -> None:
         self._tools: dict[str, ToolSpec] = {}
+        self._operations: dict[str, OperationSpec] = {}
 
     def register(self, spec: ToolSpec) -> None:
         if spec.name in self._tools:
             raise ValueError(f"tool already registered: {spec.name}")
         if spec.risk is not RiskClass.READ_ONLY:
-            raise ValueError("only READ_ONLY tools can be registered before Build 8")
+            raise ValueError(
+                "plain tools must be READ_ONLY; register changes as operations"
+            )
         if spec.input_schema.get("additionalProperties") is not False:
             raise ValueError("tool input schemas must set additionalProperties=false")
         self._tools[spec.name] = spec
 
+    def register_operation(self, spec: OperationSpec) -> None:
+        if spec.name in self._tools or spec.name in self._operations:
+            raise ValueError(f"tool already registered: {spec.name}")
+        if spec.risk is RiskClass.READ_ONLY:
+            raise ValueError("operations are for changes; use a plain tool")
+        if spec.input_schema.get("additionalProperties") is not False:
+            raise ValueError("tool input schemas must set additionalProperties=false")
+        self._operations[spec.name] = spec
+
+    def is_operation(self, name: str) -> bool:
+        return name in self._operations
+
+    def prepare(
+        self, name: str, arguments: Mapping[str, Any]
+    ) -> Operation | dict[str, Any]:
+        """Validate arguments and prepare an operation. Nothing is changed."""
+        spec = self._operations.get(name)
+        if spec is None:
+            return {"error": f"unknown tool: {name[:64]}"}
+        problems = validate(spec.input_schema, dict(arguments), "arguments")
+        if problems:
+            return {"error": "invalid arguments", "details": problems[:10]}
+        try:
+            return spec.prepare(dict(arguments))
+        except ValueError as exc:
+            return {"error": f"invalid arguments: {str(exc)[:200]}"}
+        except Exception as exc:  # noqa: BLE001 - must not crash the session
+            return {"error": f"tool failed: {type(exc).__name__}"}
+
     def __contains__(self, name: str) -> bool:
-        return name in self._tools
+        return name in self._tools or name in self._operations
 
     def names(self) -> list[str]:
-        return sorted(self._tools)
+        return sorted([*self._tools, *self._operations])
 
     def get(self, name: str) -> ToolSpec | None:
         return self._tools.get(name)
 
+    def get_operation(self, name: str) -> OperationSpec | None:
+        return self._operations.get(name)
+
     def openai_tools(self) -> list[dict[str, Any]]:
-        return [self._tools[n].to_openai_tool() for n in self.names()]
+        tools: list[dict[str, Any]] = []
+        for n in self.names():
+            spec = self._tools.get(n) or self._operations[n]
+            tools.append(spec.to_openai_tool())
+        return tools
 
     def call(self, name: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
         """Validate and run a tool. Never raises for model-caused problems."""

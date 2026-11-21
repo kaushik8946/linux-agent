@@ -126,7 +126,7 @@ def build_session(config: Config) -> Session:
     journal = TaskJournal(config.log_dir / JOURNAL_NAME, secrets=[config.api_key])
     orchestrator = Orchestrator(
         LLMClient.from_config(config),
-        build_registry(profile, runner),
+        build_registry(profile, runner, adapters=True),
         runner,
         secrets=[config.api_key],
         approvals=approvals,
