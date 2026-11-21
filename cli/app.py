@@ -11,6 +11,8 @@ from dotenv import find_dotenv, load_dotenv
 from agent.llm_client import LLMClient, LLMError, check_gateway
 from agent.version import get_version
 from config import Config, ConfigError, load_config
+from hostplatform.capabilities import render_profile
+from hostplatform.discovery import discover
 
 EXIT_OK = 0
 EXIT_CONFIG_ERROR = 2
@@ -30,6 +32,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {get_version()}"
+    )
+    parser.add_argument(
+        "--inspect",
+        action="store_true",
+        help="show detected host facts and capabilities, then exit",
     )
     parser.add_argument(
         "--check-gateway",
@@ -69,6 +76,11 @@ def run(config: Config) -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     # --help and --version exit inside parse_args, before any config is read.
     args = build_parser().parse_args(argv)
+
+    if args.inspect:
+        # Host inspection needs no gateway configuration and makes no model call.
+        print(render_profile(discover()))
+        return EXIT_OK
 
     try:
         _load_environment()

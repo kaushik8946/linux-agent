@@ -23,7 +23,7 @@ linux-agent = "cli.app:main"
 py-modules = ["config", "main"]
 
 [tool.setuptools.packages.find]
-include = ["agent*", "cli*", "tools*"]
+include = ["agent*", "cli*", "tools*", "hostplatform*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
