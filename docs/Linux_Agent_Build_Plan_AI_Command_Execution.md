@@ -87,7 +87,7 @@ installation scripts.
 
 ---
 
-## 2.Development workflow and repository setup
+## 2. Development workflow and repository setup
 
 ### Step 1 --- Create the repository
 
