@@ -466,6 +466,10 @@ def _systemctl(args: Sequence[str]) -> Classification:
                 RiskClass.SYSTEM_CHANGE, f"systemctl {arg} changes services"
             )
         return _unknown("systemctl subcommand is not recognised as read-only")
+    # With no subcommand, systemctl runs "list-units", which is read-only.
+    # Only options were given (e.g. --failed); dangerous ones were refused above.
+    if any(a.startswith("-") for a in args):
+        return _ro("systemctl defaults to list-units")
     return _unknown("systemctl needs a recognised read-only subcommand")
 
 

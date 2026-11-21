@@ -15,6 +15,7 @@ def risk(name: str, *args: str) -> RiskClass:
         ("ip", ["-br", "link", "show"]), ("ip", ["route"]), ("ss", ["-tulpn"]),
         ("systemctl", ["status", "ssh"]), ("systemctl", ["is-active", "ssh"]),
         ("systemctl", ["--no-pager", "list-units", "--failed"]),
+        ("systemctl", ["--failed", "--no-pager"]),
         ("journalctl", ["-n", "50", "--no-pager"]), ("hostname", []),
         ("docker", ["ps", "-a"]), ("docker", ["system", "df"]),
         ("docker", ["stats", "--no-stream"]), ("ls", ["-la", "/var/log"]),
