@@ -215,6 +215,31 @@ class CommandRunner:
     # Preparation (validation without running anything)
     # ------------------------------------------------------------------
 
+    def locate(self, name: str) -> tuple[str | None, str | None]:
+        """Resolve a command name without running it: ``(path, problem)``."""
+        try:
+            return str(self.resolve_executable(name)), None
+        except _Reject as rejected:
+            return None, str(rejected)
+
+    def constraints(self) -> dict[str, Any]:
+        """Non-secret facts about what this runner will and will not do."""
+        return {
+            "allowed_risk_classes": sorted(r.value for r in self._allowed_risks),
+            "default_timeout_seconds": self.limits.default_timeout,
+            "max_timeout_seconds": self.limits.max_timeout,
+            "default_output_bytes": self.limits.default_output_bytes,
+            "max_output_bytes": self.limits.max_output_bytes,
+            "working_directory_roots": [str(r) for r in self._roots],
+            "child_environment": [
+                "PATH",
+                "LC_ALL",
+                "HOME",
+                "plus allowlisted non-secret variables",
+            ],
+            "shell_syntax_supported": False,
+        }
+
     def _capability_problem(self, name: str) -> str | None:
         """Use discovered host facts to explain why a command cannot work.
 
