@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from agent.redaction import redact
+from hostplatform.identity import as_user
 
 NAME_RE = re.compile(r"[A-Z_][A-Z0-9_]{0,63}")
 MAX_VALUE = 1000
@@ -79,7 +80,8 @@ class EnvStore:
 
     def read_all(self) -> dict[str, str]:
         try:
-            text = self.file.read_text(encoding="utf-8")
+            with as_user():
+                text = self.file.read_text(encoding="utf-8")
         except OSError:  # missing, or a path component is not a directory
             return {}
         values: dict[str, str] = {}
@@ -103,22 +105,25 @@ class EnvStore:
 
     def profile_hooked(self) -> bool:
         try:
-            return BEGIN in self.profile.read_text(encoding="utf-8")
+            with as_user():
+                return BEGIN in self.profile.read_text(encoding="utf-8")
         except OSError:
             return False
 
     # -- writing -------------------------------------------------------------
 
     def set(self, name: str, value: str) -> None:
-        values = self.read_all()
-        values[name] = value
-        self._write_vars(values)
-        self._ensure_profile_hook()
+        with as_user():
+            values = self.read_all()
+            values[name] = value
+            self._write_vars(values)
+            self._ensure_profile_hook()
 
     def unset(self, name: str) -> None:
-        values = self.read_all()
-        values.pop(name, None)
-        self._write_vars(values)
+        with as_user():
+            values = self.read_all()
+            values.pop(name, None)
+            self._write_vars(values)
 
     def _write_vars(self, values: dict[str, str]) -> None:
         lines = ["# Managed by linux-agent. Edit with the agent or remove lines."]

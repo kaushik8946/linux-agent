@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Protocol
 
 from agent.command_policy import RiskClass
 from agent.policy import Requirement
+from hostplatform.identity import current
 
 if TYPE_CHECKING:
     from agent.planner import ActionPlan
@@ -116,6 +117,8 @@ def render_plan(plan: ActionPlan) -> str:
     lines = [
         f"Proposed plan ({len(plan.steps)} step(s), requires: {plan.requirement.value})"
     ]
+    if current().is_root and plan.requirement is not Requirement.AUTO:
+        lines.append("  The agent is running as root: these steps run as root.")
     for n, step in enumerate(plan.steps, 1):
         lines.append(f"  {n}. {step.command}")
         lines.append(

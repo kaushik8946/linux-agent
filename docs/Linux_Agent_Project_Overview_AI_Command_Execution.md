@@ -928,7 +928,15 @@ allow the model to approve its own plan or bypass local controls.
 
 ### 9.4 Privilege handling
 
--   Do not run the entire agent as root.
+-   Do not run the entire agent as root by default. The user may
+    explicitly start it with `sudo linux-agent`; approved commands then
+    run as root while approvals, the typed override, and the blocked
+    categories are unchanged. In that mode the agent's own files (task
+    journal, reports, `.env`, managed environment file, new projects) are
+    read and written as the invoking user (`SUDO_UID`/`SUDO_GID`, trusted
+    only when the process is really root), `~` means that user's home,
+    and the check that sources the user's environment file runs as that
+    user.
 -   Do not put the API key in a shell script or command-line argument.
 -   Do not configure passwordless unrestricted `sudo`.
 -   Prefer documented package-manager operations that prompt for the

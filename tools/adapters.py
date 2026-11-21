@@ -13,6 +13,7 @@ from agent.registry import ToolRegistry
 from hostplatform.capabilities import HostProfile
 from hostplatform.docker import DockerClient
 from hostplatform.envstore import EnvStore
+from hostplatform.identity import current
 from hostplatform.packages.apt import AptAdapter
 from hostplatform.packages.base import PackageAdapter
 from hostplatform.packages.dnf import DnfAdapter
@@ -35,7 +36,7 @@ def register_host_adapters(
     workspace_root: Path | None = None,
 ) -> list[str]:
     enabled: list[str] = []
-    register_env_tools(registry, EnvStore(home or Path.home()), shutil.which("sh"))
+    register_env_tools(registry, EnvStore(home or current().home), shutil.which("sh"))
     enabled.append("env")
     register_network_tools(registry)
     enabled.append("network")

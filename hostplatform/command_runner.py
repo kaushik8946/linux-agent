@@ -35,6 +35,7 @@ from agent.command_policy import (
 )
 from agent.redaction import redact
 from hostplatform.capabilities import DIAGNOSTIC_UTILITIES, HostProfile
+from hostplatform.identity import current
 
 DEFAULT_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Policy = Callable[[str, Sequence[str]], Classification]
@@ -201,7 +202,7 @@ class CommandRunner:
                 if resolved not in self.trusted_dirs:
                     self.trusted_dirs.append(resolved)
         self.default_cwd = Path(default_cwd or Path.cwd()).resolve()
-        roots = allowed_roots or [self.default_cwd, Path.home(), "/tmp", "/var/log"]
+        roots = allowed_roots or [self.default_cwd, current().home, "/tmp", "/var/log"]
         self._roots = [Path(r).resolve() for r in roots]
         self._secrets = [
             v

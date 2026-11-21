@@ -18,6 +18,7 @@ from agent.operations import Operation, OperationSpec
 from agent.registry import ToolRegistry, ToolSpec
 from agent.verifier import Check, CheckResult
 from hostplatform.envstore import EnvError, EnvStore, validate_name, validate_value
+from hostplatform.identity import current
 from hostplatform.privileged import ProcResult, run_fixed
 
 LIST_ENV = "list_managed_env"
@@ -38,10 +39,14 @@ def fresh_process_value(
     """Value seen by a brand-new process that sources the managed file."""
     if shell is None or not store.file.exists():
         return None
+    # The probe sources a file the user can edit, so under `sudo linux-agent`
+    # it runs as that user, never as root.
+    extra: dict[str, Any] = {"as_invoking_user": True} if current().demote else {}
     result = run(
         [shell, "-c", _PROBE, "sh", str(store.file), name],
         timeout=10,
         env={"PATH": "/usr/bin:/bin", "HOME": str(store.home)},
+        **extra,
     )
     if not result.ok:
         return None

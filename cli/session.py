@@ -24,6 +24,7 @@ from agent.report_writer import ReportError, build_report, write_report
 from agent.textutil import strip_control
 from config import Config
 from hostplatform.capabilities import HostProfile, render_profile
+from hostplatform.identity import as_user, current
 
 HELP_TEXT = """\
 Describe what you want to know in plain language, for example:
@@ -71,6 +72,9 @@ class Session:
             f"(model: {escape(self.config.model)})"
         )
         self.console.print(self._host_line())
+        who = self._identity_line()
+        if who:
+            self.console.print(who)
         self.console.print(
             "Type a request, or /help. Changes are shown for your approval first.\n"
         )
@@ -140,9 +144,9 @@ class Session:
             secrets=self.secrets,
         )
         try:
-            path = write_report(
-                self.config.ensure_report_dir(), content, self.session_id
-            )
+            with as_user():
+                report_dir = self.config.ensure_report_dir()
+            path = write_report(report_dir, content, self.session_id)
         except (ReportError, OSError) as exc:
             self.console.print(
                 f"[red]Report not saved:[/red] {escape(self._safe(str(exc)))}"
@@ -275,6 +279,21 @@ class Session:
                 f"[yellow]Stopped early: {result.stop_reason.value}[/yellow]"
             )
         self.console.print("[dim]Type /report to save a report.[/dim]\n")
+
+    def _identity_line(self) -> str | None:
+        ident = current()
+        if not ident.is_root:
+            return None
+        if ident.via_sudo:
+            return (
+                f"[bold yellow]Running as root[/bold yellow] for {escape(ident.user or '?')} "
+                "(sudo). Commands you approve run as root; your files stay "
+                f"owned by {escape(ident.user or 'you')}."
+            )
+        return (
+            "[bold yellow]Running as root.[/bold yellow] Commands you approve "
+            "run as root."
+        )
 
     def _host_line(self) -> str:
         p = self.profile

@@ -48,6 +48,40 @@ Configuration problems are reported together, without echoing secret values.
 
 `python main.py` is equivalent to `linux-agent`.
 
+### Running as root (`sudo linux-agent`)
+
+You can start the agent with sudo to let it act as root:
+
+    sudo "$(command -v linux-agent)"        # path of the installed command
+    # or, from a checkout:  sudo .venv/bin/linux-agent
+
+Use the full path: sudo's own `PATH` usually does not include your virtual
+environment. sudo also clears most environment variables, so put your gateway
+settings in `.env` (read from the directory you start in, as you) instead of
+exporting them.
+
+What changes:
+
+- **Approved commands run as root.** The preview says so. A package install or
+  service start no longer calls `sudo` and does not ask for a password; the
+  approval prompt is the gate.
+- **Nothing is approved automatically.** Read-only commands still run on
+  their own; everything else still needs your `y`, unrecognised commands still
+  say NOT RECOGNISED, and shells and `sudo` steps still need the typed
+  override phrase. Credential access and the never-approvable list (disk,
+  firewall, account, boot and power commands) stay blocked even as root.
+- **Your files stay yours.** `~` means your home, not `/root`. The journal,
+  reports, `.env` reading, the managed environment file and new projects are
+  read and written with your user id and groups, so they are not owned by
+  root and a planted symlink cannot make root write elsewhere. The
+  environment-variable check, which runs a file you can edit, also runs as you.
+- **You are told.** The banner says "Running as root".
+
+This is a larger blast radius than the normal mode: a mistake you approve
+cannot be stopped by missing permissions. It is intended for a machine you
+administer. The agent never configures passwordless sudo and never stores or
+sees your password; you type it once, to sudo, when starting.
+
 ### Interactive session
 
 Type a request, for example:
@@ -186,7 +220,8 @@ the next command from what it observed.
   they ask you rather than run automatically.
 - **Typed operations use their own elevation.** Package installs and service
   starts elevate inside their adapters with a fixed
-  `sudo -- <absolute path> ...` command, after a normal approval.
+  `sudo -- <absolute path> ...` command, after a normal approval. When the
+  whole agent was started with `sudo linux-agent` they run directly as root.
 - **Model approval is ignored.** An `approved` flag or any other approval field
   in model output is rejected. Approval comes only from your answer at the
   prompt.

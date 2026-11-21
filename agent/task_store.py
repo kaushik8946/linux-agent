@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from agent.redaction import redact
+from hostplatform.identity import as_user
 
 EXCERPT_CHARS = 300
 JOURNAL_NAME = "tasks.jsonl"
@@ -51,7 +52,7 @@ class TaskJournal:
             **data,
         }
         line = redact(json.dumps(entry, default=str, sort_keys=True), self.secrets)
-        with self._lock:
+        with self._lock, as_user():
             try:
                 self.path.parent.mkdir(parents=True, exist_ok=True)
                 fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
@@ -66,7 +67,8 @@ class TaskJournal:
 
     def events(self) -> Iterator[dict[str, Any]]:
         try:
-            text = self.path.read_text(encoding="utf-8")
+            with as_user():
+                text = self.path.read_text(encoding="utf-8")
         except FileNotFoundError:
             return
         except (OSError, UnicodeDecodeError) as exc:

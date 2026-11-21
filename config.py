@@ -45,7 +45,7 @@ class Config:
     report_dir: Path
     log_dir: Path
     workspace_root: Path = field(
-        default_factory=lambda: Path("~/projects").expanduser()
+        default_factory=lambda: expand_home(Path("~/projects"))
     )
 
     def ensure_log_dir(self) -> Path:
@@ -72,6 +72,19 @@ class Config:
         }
 
 
+def expand_home(path: Path) -> Path:
+    """Expand a leading ``~`` to the home of the person the agent works for.
+
+    Under ``sudo linux-agent`` that is the user who ran sudo, not ``/root``.
+    """
+    from hostplatform.identity import current
+
+    text = str(path)
+    if text == "~" or text.startswith("~/"):
+        return current().home / text[2:] if len(text) > 1 else current().home
+    return path.expanduser()
+
+
 def _get(env: Mapping[str, str], name: str) -> str:
     return env.get(name, "").strip()
 
@@ -88,7 +101,7 @@ def _resolve_dir(
     if "\x00" in str(path):
         problems.append(f"{name} contains an invalid character")
         return path
-    path = path.expanduser()
+    path = expand_home(path)
     if not path.is_absolute():
         path = base_dir / path
     if path.exists() and not path.is_dir():

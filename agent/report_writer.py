@@ -22,6 +22,7 @@ from typing import Any
 from agent.orchestrator import StopReason, ToolEvent, TurnResult
 from agent.redaction import redact
 from agent.textutil import excerpt, fence, strip_control
+from hostplatform.identity import as_user
 
 EXCERPT_CHARS = 600
 MAX_REQUEST_CHARS = 2000
@@ -218,6 +219,13 @@ def write_report(
     now: datetime | None = None,
 ) -> Path:
     """Write ``content`` to a new, uniquely named file and return its path."""
+    with as_user():
+        return _write_report(report_dir, content, session_id, now)
+
+
+def _write_report(
+    report_dir: Path, content: str, session_id: str, now: datetime | None
+) -> Path:
     now = now or datetime.now(UTC)
     try:
         report_dir.mkdir(parents=True, exist_ok=True)

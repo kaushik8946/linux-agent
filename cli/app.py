@@ -22,6 +22,7 @@ from config import Config, ConfigError, load_config
 from hostplatform.capabilities import render_profile
 from hostplatform.command_runner import CommandRunner
 from hostplatform.discovery import discover
+from hostplatform.identity import as_user
 from tools.system import build_registry
 
 EXIT_OK = 0
@@ -70,7 +71,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _load_environment() -> None:
     # Existing environment variables take precedence over the .env file.
-    load_dotenv(find_dotenv(usecwd=True), override=False)
+    # Under `sudo linux-agent` the file is read as the invoking user, so a
+    # symlinked .env cannot make root read something the user could not.
+    with as_user():
+        load_dotenv(find_dotenv(usecwd=True), override=False)
 
 
 def preview_plan_command(source: str) -> int:

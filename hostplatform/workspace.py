@@ -14,6 +14,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from hostplatform.identity import as_user
+
 PROJECT_NAME = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
 KINDS = ("python", "text")
 
@@ -83,9 +85,11 @@ def workspace_problem(root: Path) -> str | None:
     """Why ``root`` cannot be used as a workspace, or None if it can."""
     if not root.is_absolute():
         return "workspace root must be an absolute path"
-    if not root.is_dir():
+    with as_user():
+        exists, writable = root.is_dir(), os.access(root, os.W_OK)
+    if not exists:
         return "workspace root does not exist"
-    if not os.access(root, os.W_OK):
+    if not writable:
         return "workspace root is not writable"
     if root.is_symlink():
         return "workspace root must not be a symbolic link"
@@ -107,7 +111,15 @@ def conflicts(plan: ProjectPlan) -> list[str]:
 
 
 def create(plan: ProjectPlan) -> list[str]:
-    """Write the project. Refuses to touch anything that already exists."""
+    """Write the project. Refuses to touch anything that already exists.
+
+    Under ``sudo linux-agent`` the files are created as the invoking user.
+    """
+    with as_user():
+        return _create(plan)
+
+
+def _create(plan: ProjectPlan) -> list[str]:
     if plan.path.exists():
         raise WorkspaceError("a file or directory with that name already exists")
     written: list[str] = []

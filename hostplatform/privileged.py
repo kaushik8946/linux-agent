@@ -15,8 +15,10 @@ from __future__ import annotations
 import subprocess
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from typing import Any
 
 from agent.redaction import redact
+from hostplatform.identity import user_process_ids
 
 DEFAULT_TIMEOUT = 600.0
 MAX_CAPTURE = 64 * 1024
@@ -43,12 +45,17 @@ def run_fixed(
     argv: Sequence[str],
     timeout: float = DEFAULT_TIMEOUT,
     env: Mapping[str, str] | None = None,
+    as_invoking_user: bool = False,
 ) -> ProcResult:
     """Run a fixed argv with ``shell=False`` and bounded, redacted output.
 
     stdin is inherited so ``sudo`` can ask the user for a password on the
     terminal; it is never fed data by the agent.
     """
+    ids = user_process_ids() if as_invoking_user else None
+    extra: dict[str, Any] = (
+        {"user": ids[0], "group": ids[1], "extra_groups": list(ids[2])} if ids else {}
+    )
     try:
         proc = subprocess.run(
             list(argv),
@@ -57,6 +64,7 @@ def run_fixed(
             timeout=timeout,
             env=dict(env) if env is not None else None,
             check=False,
+            **extra,
         )
     except subprocess.TimeoutExpired as exc:
         return ProcResult(tuple(argv), None, _text(exc.stdout), _text(exc.stderr), True)
