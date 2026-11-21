@@ -11,9 +11,11 @@ from pathlib import Path
 
 from agent.registry import ToolRegistry
 from hostplatform.capabilities import HostProfile
+from hostplatform.docker import DockerClient
 from hostplatform.envstore import EnvStore
 from hostplatform.packages.apt import AptAdapter
 from hostplatform.services.systemd import SystemdAdapter
+from tools.docker import register_docker_tools
 from tools.envvars import register_env_tools
 from tools.packages import register_package_tools, register_service_tools
 
@@ -25,6 +27,10 @@ def register_host_adapters(
     register_env_tools(registry, EnvStore(home or Path.home()), shutil.which("sh"))
     enabled.append("env")
     is_root = bool(host.privileges.is_root)
+    docker = DockerClient(shutil.which)
+    if docker.available():
+        register_docker_tools(registry, docker)
+        enabled.append("docker")
     if "apt-get" in host.package_managers:
         apt = AptAdapter(shutil.which, is_root)
         if apt.available():
