@@ -98,11 +98,23 @@ def preview_plan_command(source: str) -> int:
 
     runner = CommandRunner.for_host(discover())
     print(f"Plan ({len(plan.steps)} step(s), mode: {plan.mode}); nothing is executed.")
-    print(runner.preview(plan))
-    blocked = [p for p in runner.preview_steps(plan) if p.blocked_reason]
-    if blocked:
-        print(f"\n{len(blocked)} step(s) blocked; the plan would not run.")
+    print(runner.preview(plan, gate=False))
+    steps = runner.preview_steps(plan, gate=False)
+    unrecognised = [p for p in steps if p.risk == "UNKNOWN" and not p.blocked_reason]
+    never = [
+        p
+        for p in steps
+        if p.blocked_reason
+        or p.risk in ("UNSUPPORTED", "PRIVILEGED", "SENSITIVE", None)
+    ]
+    if never:
+        print(f"\n{len(never)} step(s) blocked; the plan would not run.")
         return EXIT_PLAN_INVALID
+    if unrecognised:
+        print(
+            f"\n{len(unrecognised)} step(s) not recognised by the policy; "
+            "the agent would ask for your approval before running them."
+        )
     return EXIT_OK
 
 

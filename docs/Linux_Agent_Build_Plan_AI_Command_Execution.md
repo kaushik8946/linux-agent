@@ -401,7 +401,8 @@ Requirements:
 - No shell process is spawned.
 - Working-directory and environment restrictions.
 - Secret redaction and bounded stdin/stdout chaining.
-- Unknown command defaults to a conservative risk class.
+- Unknown command defaults to a conservative risk class (UNKNOWN), which
+  requires local approval and is never run automatically.
 
 **Acceptance:** The model can propose a multi-step read-only command
 plan at runtime, the CLI can preview it, and the local executor can run
@@ -842,6 +843,10 @@ Test both the model-planning boundary and the local execution boundary:
   policy can classify them confidently.
 - Modifying, privileged, destructive, and unknown commands follow
   their approval/blocking rules; model-supplied approval is ignored.
+  Unknown (unrecognised) commands ask the user for approval instead of
+  being refused, because every tool cannot be classified in advance;
+  shells, wrappers, privilege escalation, credential access and the
+  never-approvable list remain blocked.
 - The model receives command results as untrusted evidence and can
   choose another step without blindly repeating a failed command.
 

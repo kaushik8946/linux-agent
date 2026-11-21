@@ -387,13 +387,15 @@ class CommandRunner:
                 )
         return previews
 
-    def preview(self, plan: CommandPlan) -> str:
+    def preview(self, plan: CommandPlan, gate: bool = True) -> str:
         """Human-readable preview of a plan. Starts nothing."""
         lines = []
-        for n, item in enumerate(self.preview_steps(plan), 1):
+        for n, item in enumerate(self.preview_steps(plan, gate), 1):
             lines.append(f"{n}. [{item.risk or 'REJECTED'}] {item.command}")
             if item.blocked_reason:
                 lines.append(f"   BLOCKED - {item.blocked_reason}")
+            elif item.risk in ("UNSUPPORTED", "PRIVILEGED", "SENSITIVE"):
+                lines.append("   BLOCKED - never run by this agent")
             lines.append(f"   purpose: {item.purpose}")
         return "\n".join(lines)
 

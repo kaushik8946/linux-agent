@@ -37,10 +37,15 @@ from hostplatform.command_runner import CommandRunner, PlanResult, Status, StepR
 # Risk classes an approval may unlock. Anything else stays blocked.
 APPROVABLE = {
     Requirement.CONFIRM: frozenset(
-        {RiskClass.USER_LEVEL_CHANGE, RiskClass.SYSTEM_CHANGE}
+        {RiskClass.USER_LEVEL_CHANGE, RiskClass.SYSTEM_CHANGE, RiskClass.UNKNOWN}
     ),
     Requirement.TYPED: frozenset(
-        {RiskClass.USER_LEVEL_CHANGE, RiskClass.SYSTEM_CHANGE, RiskClass.DESTRUCTIVE}
+        {
+            RiskClass.USER_LEVEL_CHANGE,
+            RiskClass.SYSTEM_CHANGE,
+            RiskClass.DESTRUCTIVE,
+            RiskClass.UNKNOWN,
+        }
     ),
 }
 

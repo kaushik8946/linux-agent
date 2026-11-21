@@ -350,7 +350,7 @@ prompts.
 **Policy and permission layer** - Classifies registered application
 tools and dynamically proposed command steps as read-only, modifying,
 privileged, destructive, or unknown. - Requires local user approval for
-modifications and stronger typed confirmation for high-impact actions.
+modifications and for unrecognised commands and stronger typed confirmation for high-impact actions.
 - Rejects unknown application tools, malformed command plans, unsafe
 arguments, and unsupported execution features. - Does not trust a
 model-supplied `confirm=true` value as proof of user approval.
@@ -885,8 +885,14 @@ execution uses the original argument array.
     operations require local approval. Destructive, security-sensitive,
     or high-impact operations require a stronger typed confirmation or
     may be blocked entirely in Version 1.
--   Unknown or unclassifiable commands must not be treated as read-only;
-    default to requiring approval or blocking them according to policy.
+-   Unknown or unclassifiable commands must not be treated as read-only.
+    The agent cannot ship a rule for every tool, so an unrecognised
+    command is not refused: it is shown to the user, clearly marked as
+    not recognised, and runs only after explicit local approval (default
+    No). Approval is bound to the exact command and arguments. Shells,
+    command wrappers, privilege escalation, credential access and the
+    never-approvable list (disk, firewall, account, boot and power
+    changes) stay blocked and cannot be approved.
 -   Validate paths, working directories, package names, service names,
     and target resources before execution.
 -   Apply timeouts, output limits, cancellation, and secret redaction.

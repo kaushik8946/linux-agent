@@ -12,6 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
+from agent.command_policy import RiskClass
 from agent.policy import Requirement
 
 if TYPE_CHECKING:
@@ -118,6 +119,11 @@ def render_plan(plan: ActionPlan) -> str:
             lines.append(f"     BLOCKED: {step.blocked_reason}")
         elif step.decision.requirement is Requirement.BLOCKED:
             lines.append(f"     BLOCKED: {step.decision.reason}")
+        elif step.decision.risk is RiskClass.UNKNOWN:
+            lines.append(
+                "     NOT RECOGNISED: the agent cannot tell what this command "
+                "does. Approve only if you know it is safe."
+            )
     ctx = plan.context
     if ctx:
         lines.append(f"  Expected end state: {ctx.expected_end_state}")

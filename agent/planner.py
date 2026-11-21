@@ -48,6 +48,19 @@ class ActionPlan:
         return any(s.decision.requirement is not Requirement.AUTO for s in self.steps)
 
     @property
+    def has_known_change(self) -> bool:
+        """A step the policy knows changes something (not merely unrecognised)."""
+        return any(
+            s.decision.requirement is not Requirement.AUTO
+            and s.decision.risk is not RiskClass.UNKNOWN
+            for s in self.steps
+        )
+
+    @property
+    def has_unrecognised(self) -> bool:
+        return any(s.decision.risk is RiskClass.UNKNOWN for s in self.steps)
+
+    @property
     def blocked(self) -> bool:
         return self.requirement is Requirement.BLOCKED
 
@@ -101,7 +114,10 @@ def build_action_plan(
         )
     errors: list[str] = []
     plan_obj = ActionPlan(steps, context, fingerprint(plan), errors)
-    if plan_obj.is_modifying and context is None:
+    # The model can only describe an end state for changes the policy knows
+    # about. An unrecognised command is shown to the user with a warning
+    # instead; the description is still welcome if the model has one.
+    if plan_obj.has_known_change and context is None:
         errors.append(
             "a plan that changes the system must describe its expected end "
             "state (plan_context.expected_end_state)"

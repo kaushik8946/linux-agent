@@ -64,9 +64,12 @@ _RULES: dict[RiskClass, tuple[Requirement, str]] = {
             "dedicated reviewed workflow"
         ),
     ),
+    # A command the classifier does not recognise may do anything, so it is
+    # never run automatically. The user sees it and decides; new tools do not
+    # need a policy rule before they can be used.
     RiskClass.UNKNOWN: (
-        Requirement.BLOCKED,
-        "command could not be classified, so it is not run",
+        Requirement.CONFIRM,
+        "not recognised by the agent's policy; runs only if you approve it",
     ),
     RiskClass.UNSUPPORTED: (
         Requirement.BLOCKED,

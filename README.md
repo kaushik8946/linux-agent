@@ -163,10 +163,17 @@ the next command from what it observed.
   `$()`, `|`, `;`, `>` and `*` stay literal text. Shells and wrappers (`bash`,
   `env`, `xargs`, `ssh`, ...) are rejected.
 - **Read-only by default.** A command runs automatically only if the policy
-  positively recognises it as read-only. Modifying, privileged, destructive,
-  credential-touching and unknown commands are blocked, as are dangerous flags
-  on safe tools (`find -exec`, `tail -f`, `ps e`). If any step in a plan is
-  blocked, nothing in that plan runs.
+  positively recognises it as read-only.
+- **Unrecognised commands ask you.** A command the policy has no rule for (for
+  example `g++ --version`, `git`, `python3`) is not refused. It is shown marked
+  "NOT RECOGNISED" and runs only if you approve it; the default is No. The
+  agent therefore works with tools nobody has classified yet.
+- **Some things can never be approved:** shells and wrappers (`bash`, `env`,
+  `xargs`, `ssh`, ...), `sudo` and similar, commands touching credentials, and
+  disk, firewall, account, boot and power commands. If any step in a plan is
+  blocked this way, nothing in that plan runs. Dangerous flags on safe tools
+  (`find -exec`, `tail -f`, `ps e`) are treated as unrecognised, so they ask
+  you rather than run automatically.
 - **Privilege is blocked in command plans.** `sudo` and similar wrappers are
   refused there. Elevation happens only inside the dedicated adapters, as a
   fixed `sudo -- <absolute path> ...` command. The agent never sees your
@@ -234,9 +241,11 @@ tried only in a disposable VM.
 - **Docker** requires a reachable daemon and a user who may use it. Docker
   group membership is effectively root, which is why container changes are
   classified as system changes.
-- **Allowlists are hand-written.** The read-only command list and the
-  documentation-host list only cover what is listed. Anything else is blocked
-  and the model must choose another route.
+- **Allowlists are hand-written.** Commands outside the read-only list are
+  not auto-run: you are asked each time. Web fetching is limited to the
+  documentation-host list.
+- **Approving an unrecognised command is your judgement.** The agent cannot
+  tell what an unknown command does, so read the preview before saying yes.
 - **Only one package manager per host** is used for typed package operations
   (apt if present, otherwise dnf). Other managers (snap, flatpak, pipx, npm)
   are reported by `compare_install_methods` but cannot be installed by this

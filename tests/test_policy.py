@@ -80,7 +80,7 @@ class Prompt:
         (RiskClass.SYSTEM_CHANGE, Requirement.CONFIRM),
         (RiskClass.DESTRUCTIVE, Requirement.TYPED),
         (RiskClass.PRIVILEGED, Requirement.BLOCKED),
-        (RiskClass.UNKNOWN, Requirement.BLOCKED),
+        (RiskClass.UNKNOWN, Requirement.CONFIRM),
         (RiskClass.UNSUPPORTED, Requirement.BLOCKED),
         (RiskClass.SENSITIVE, Requirement.BLOCKED),
     ],
