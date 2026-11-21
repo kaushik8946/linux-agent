@@ -24,6 +24,9 @@ _METHODS: list[dict[str, Any]] = [
     {"method": "apt", "executable": "apt-get", "needs_root": True,
      "updates": "with normal system updates", "isolation": "none (system-wide)",
      "supported_by_agent": True},
+    {"method": "dnf", "executable": "dnf", "needs_root": True,
+     "updates": "with normal system updates", "isolation": "none (system-wide)",
+     "supported_by_agent": True},
     {"method": "snap", "executable": "snap", "needs_root": True,
      "updates": "automatic, from the vendor channel", "isolation": "sandboxed",
      "supported_by_agent": False},
@@ -90,7 +93,17 @@ def register_research_tools(
             present = which(m["executable"]) is not None
             row = {k: v for k, v in m.items() if k != "executable"}
             row["manager_present"] = present
-            if m["method"] == "apt" and packages is not None and packages.available():
+            if m["method"] in ("apt", "dnf"):
+                row["supported_by_agent"] = bool(
+                    packages is not None
+                    and packages.available()
+                    and packages.name == m["method"]
+                )
+            if (
+                packages is not None
+                and packages.available()
+                and m["method"] == packages.name
+            ):
                 st = packages.query(name)
                 row["in_repository"] = st.status is not PackageStatus.UNAVAILABLE
                 row["installed_version"] = st.installed_version

@@ -14,6 +14,8 @@ from hostplatform.capabilities import HostProfile
 from hostplatform.docker import DockerClient
 from hostplatform.envstore import EnvStore
 from hostplatform.packages.apt import AptAdapter
+from hostplatform.packages.base import PackageAdapter
+from hostplatform.packages.dnf import DnfAdapter
 from hostplatform.services.systemd import SystemdAdapter
 from tools.devtools import register_dev_tools
 from tools.docker import register_docker_tools
@@ -45,14 +47,20 @@ def register_host_adapters(
         register_docker_tools(registry, docker)
         register_docker_operations(registry, docker)
         enabled.append("docker")
-    packages: AptAdapter | None = None
+    packages: PackageAdapter | None = None
     if "apt-get" in host.package_managers:
         apt = AptAdapter(shutil.which, is_root)
         if apt.available():
             packages = apt
             register_package_tools(registry, apt)
-            register_dev_tools(registry, apt)
+            register_dev_tools(registry, apt)  # package names are apt-specific
             enabled.append("apt")
+    elif "dnf" in host.package_managers:
+        dnf = DnfAdapter(shutil.which, is_root)
+        if dnf.available():
+            packages = dnf
+            register_package_tools(registry, dnf)
+            enabled.append("dnf")
     register_research_tools(registry, packages)
     enabled.append("research")
     sm = host.service_manager

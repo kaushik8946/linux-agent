@@ -171,8 +171,8 @@ def register_package_tools(
                     "installed version is recorded",
                 ],
                 recovery=(
-                    f"If unwanted, remove it yourself with: sudo apt-get remove "
-                    f"{name}. This agent does not remove packages."
+                    f"If unwanted, remove it yourself with: "
+                    f"{adapter.remove_hint(name)}. This agent does not remove packages."
                 ),
                 perform=perform,
                 checks=install_checks(name, plan.candidate_version),

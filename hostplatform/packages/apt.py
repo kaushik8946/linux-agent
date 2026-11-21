@@ -65,6 +65,9 @@ class AptAdapter(PackageAdapter):
     def available(self) -> bool:
         return bool(self.dpkg_query and self.apt_cache and self.apt_get)
 
+    def remove_hint(self, package: str) -> str:
+        return f"sudo apt-get remove {validate_package_name(package)}"
+
     # -- queries -------------------------------------------------------------
 
     def query(self, package: str) -> PackageState:

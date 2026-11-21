@@ -90,6 +90,10 @@ class PackageAdapter(ABC):
         """True if this manager's executables were found on this host."""
 
     @abstractmethod
+    def remove_hint(self, package: str) -> str:
+        """The command the *user* could run to undo an install. Never run by us."""
+
+    @abstractmethod
     def query(self, package: str) -> PackageState: ...
 
     @abstractmethod
